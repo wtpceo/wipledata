@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       }, {} as { [key: string]: any })
 
       aeRankings = Object.values(aePerformances)
-        .sort((a, b) => b.renewalRevenue - a.renewalRevenue)
+        .sort((a: any, b: any) => b.renewalRevenue - a.renewalRevenue)
 
       // 부서별 통계 계산
       const deptPerformances = latestMonth.performances.reduce((acc, perf) => {

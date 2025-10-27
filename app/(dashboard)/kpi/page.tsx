@@ -124,7 +124,7 @@ export default function KPIPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data?.yearlyComparison?.growthRate > 0 ? '+' : ''}{formatPercent(data?.yearlyComparison?.growthRate || 0)}
+              {(data?.yearlyComparison?.growthRate ?? 0) > 0 ? '+' : ''}{formatPercent(data?.yearlyComparison?.growthRate ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               작년: {formatCurrency(data?.yearlyComparison?.previousYear || 0)}

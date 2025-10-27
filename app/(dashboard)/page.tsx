@@ -131,7 +131,7 @@ export default function DashboardPage() {
               {formatCurrency(data?.overview?.currentMonthTotal || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              전월 대비 {data?.overview?.monthGrowthRate > 0 ? '+' : ''}{data?.overview?.monthGrowthRate || 0}%
+              전월 대비 {(data?.overview?.monthGrowthRate ?? 0) > 0 ? '+' : ''}{data?.overview?.monthGrowthRate ?? 0}%
             </p>
           </CardContent>
         </Card>

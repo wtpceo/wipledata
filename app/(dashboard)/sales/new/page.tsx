@@ -42,7 +42,7 @@ export default function NewSalePage() {
     return new Intl.NumberFormat('ko-KR').format(Number(number))
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
 
     if (name === 'totalAmount' || name === 'outsourcingCost') {
