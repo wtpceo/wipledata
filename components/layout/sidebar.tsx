@@ -26,6 +26,7 @@ const navigation = [
       { name: '전체 현황', href: '/', icon: LayoutDashboard },
       { name: 'KPI 대시보드', href: '/kpi', icon: BarChart3 },
       { name: '영업 실적', href: '/sales-dashboard', icon: TrendingUp },
+      { name: '담당자별 실적', href: '/staff-performance', icon: Users },
       { name: 'AE 실적', href: '/ae-performance', icon: Award },
       { name: 'AE별 종료 업체 관리', href: '/client-termination', icon: AlertTriangle },
     ]
