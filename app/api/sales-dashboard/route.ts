@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
     const inputPersonIndex = headers.findIndex((h: string) =>
       h?.includes('입력자') || h?.toLowerCase().includes('input_person')
     )
+    const salesTypeIndex = headers.findIndex((h: string) =>
+      h?.includes('매출 유형') || h?.includes('Sales_Type') || h?.includes('유형')
+    )
     const amountIndex = headers.findIndex((h: string) =>
       h?.includes('총 계약금액') || h?.includes('Total_Amount') || h?.includes('계약금액')
     )
@@ -72,10 +75,12 @@ export async function GET(request: NextRequest) {
       totalSales: number
       clients: Set<string>
       monthlyData: { [key: string]: number }
+      salesByType: { [key: string]: { count: number, amount: number } }
     }} = {}
 
     salesDeptData.forEach(row => {
       const salesPerson = row[inputPersonIndex]?.trim()
+      const salesType = row[salesTypeIndex]?.trim() || '기타'
       const amountStr = row[amountIndex]?.toString().replace(/[^0-9.-]/g, '') || '0'
       const amount = parseFloat(amountStr) || 0
       const client = row[clientIndex]?.trim() || ''
@@ -115,7 +120,8 @@ export async function GET(request: NextRequest) {
           salesPerson,
           totalSales: 0,
           clients: new Set(),
-          monthlyData: {}
+          monthlyData: {},
+          salesByType: {}
         }
       }
 
@@ -127,6 +133,13 @@ export async function GET(request: NextRequest) {
         salesPeopleMap[salesPerson].monthlyData[monthKey] =
           (salesPeopleMap[salesPerson].monthlyData[monthKey] || 0) + amount
       }
+
+      // 매출 유형별 집계
+      if (!salesPeopleMap[salesPerson].salesByType[salesType]) {
+        salesPeopleMap[salesPerson].salesByType[salesType] = { count: 0, amount: 0 }
+      }
+      salesPeopleMap[salesPerson].salesByType[salesType].count += 1
+      salesPeopleMap[salesPerson].salesByType[salesType].amount += amount
     })
 
     // 결과 데이터 변환
@@ -137,7 +150,8 @@ export async function GET(request: NextRequest) {
       averageSale: person.clients.size > 0 ? person.totalSales / person.clients.size : 0,
       monthlyData: Object.entries(person.monthlyData)
         .map(([month, amount]) => ({ month, amount }))
-        .sort((a, b) => a.month.localeCompare(b.month))
+        .sort((a, b) => a.month.localeCompare(b.month)),
+      salesByType: person.salesByType
     }))
 
     // 전체 통계 계산

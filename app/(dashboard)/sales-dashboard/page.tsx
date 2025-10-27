@@ -13,6 +13,12 @@ interface SalesPersonPerformance {
     month: string
     amount: number
   }[]
+  salesByType: {
+    [key: string]: {
+      count: number
+      amount: number
+    }
+  }
 }
 
 interface SalesDashboardData {
@@ -56,6 +62,15 @@ export default function SalesDashboardPage() {
       maximumFractionDigits: amount >= 100000000 ? 1 : 0,
       minimumFractionDigits: 0,
     }).format(amount)
+  }
+
+  // 매출 유형별 색상 매핑
+  const salesTypeColors: { [key: string]: string } = {
+    '신규': 'bg-blue-500',
+    '연장': 'bg-green-500',
+    '재계약': 'bg-purple-500',
+    '기존고객 소개': 'bg-orange-500',
+    '기타': 'bg-gray-500'
   }
 
   if (loading) {
@@ -154,9 +169,32 @@ export default function SalesDashboardPage() {
                     </div>
                   </div>
 
+                  {/* 매출 유형별 상세 */}
+                  {person.salesByType && Object.keys(person.salesByType).length > 0 && (
+                    <div className="mt-3 border-t pt-3">
+                      <p className="text-sm font-medium mb-2">매출 유형별</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {Object.entries(person.salesByType).map(([type, data]) => (
+                          <div key={type} className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <div className={`w-2 h-2 rounded-full ${salesTypeColors[type] || 'bg-gray-500'}`} />
+                              <span className="text-xs font-medium">{type}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {data.count}건
+                            </div>
+                            <div className="text-sm font-semibold">
+                              {formatCurrency(data.amount)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* 월별 실적 바 */}
                   {person.monthlyData && person.monthlyData.length > 0 && (
-                    <div className="mt-3">
+                    <div className="mt-3 border-t pt-3">
                       <p className="text-sm font-medium mb-2">월별 추이</p>
                       <div className="space-y-2">
                         {person.monthlyData.slice(-3).map((monthData, idx) => {
