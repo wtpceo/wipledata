@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import {
   LayoutDashboard,
   FileText,
@@ -16,7 +17,8 @@ import {
   BarChart3,
   BookOpen,
   Award,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react'
 
 const navigation = [
@@ -71,43 +73,72 @@ const navigation = [
   },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname()
 
   return (
-    <div className="w-64 bg-card border-r h-full">
-      <div className="p-6">
-        <h2 className="text-2xl font-bold">WTP Dashboard</h2>
-      </div>
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
-      <nav className="px-4 pb-6">
-        {navigation.map((section) => (
-          <div key={section.title} className="mb-6">
-            <h3 className="mb-2 px-2 text-sm font-semibold text-muted-foreground">
-              {section.title}
-            </h3>
-            <div className="space-y-1">
-              {section.items.map((item) => {
-                const Icon = item.icon
-                const isActive = pathname === item.href
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-card border-r h-full
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Close button for mobile */}
+        <div className="flex items-center justify-between p-6 lg:block">
+          <h2 className="text-2xl font-bold">WTP Dashboard</h2>
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 hover:bg-accent rounded-md"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground ${
-                      isActive ? 'bg-accent' : ''
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.name}
-                  </Link>
-                )
-              })}
+        <nav className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 88px)' }}>
+          {navigation.map((section) => (
+            <div key={section.title} className="mb-6">
+              <h3 className="mb-2 px-2 text-sm font-semibold text-muted-foreground">
+                {section.title}
+              </h3>
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = pathname === item.href
+
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={onClose}
+                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground ${
+                        isActive ? 'bg-accent' : ''
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.name}
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
-      </nav>
-    </div>
+          ))}
+        </nav>
+      </div>
+    </>
   )
 }
