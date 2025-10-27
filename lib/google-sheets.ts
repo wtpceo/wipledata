@@ -2,10 +2,25 @@ import { google } from 'googleapis'
 
 // Google Sheets 인증 클라이언트 생성
 export function getGoogleAuth() {
+  // Private key 처리: Base64 인코딩된 경우 디코딩, 아니면 그대로 사용
+  let privateKey = process.env.GOOGLE_PRIVATE_KEY || ''
+
+  // Base64로 인코딩된 경우 (특수문자가 없고 길이가 길면)
+  if (privateKey && !privateKey.includes('BEGIN PRIVATE KEY') && privateKey.length > 1000) {
+    try {
+      privateKey = Buffer.from(privateKey, 'base64').toString('utf-8')
+    } catch (error) {
+      console.error('Failed to decode base64 private key, using as-is')
+    }
+  }
+
+  // \n 처리
+  privateKey = privateKey.replace(/\\n/g, '\n')
+
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      private_key: privateKey,
     },
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   })
