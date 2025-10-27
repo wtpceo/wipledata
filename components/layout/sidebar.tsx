@@ -35,13 +35,10 @@ const navigation = [
     items: [
       { name: '매출 입력', href: '/sales/new', icon: DollarSign },
       { name: 'AE 실적 입력', href: '/ae-performance/new', icon: Award },
-      { name: '매입 입력', href: '/purchase/new', icon: ShoppingCart },
-      { name: '운영비 입력', href: '/expenses/new', icon: Receipt },
-      { name: '고객 관계 관리', href: '/client-management/new', icon: Users },
     ]
   },
   {
-    title: '데이터 관리',
+    title: '경영관리',
     items: [
       { name: '매출 조회', href: '/sales', icon: FileText },
       { name: '매입 조회', href: '/purchase', icon: FileText },
@@ -54,7 +51,8 @@ const navigation = [
     title: '성과 분석',
     items: [
       { name: '목표 관리', href: '/goals', icon: Target },
-      { name: '수익성 분석', href: '/executive', icon: TrendingUp },
+      { name: '전체 수익성 분석', href: '/profitability', icon: TrendingUp },
+      { name: '부서별 수익성', href: '/department-profitability', icon: BarChart3 },
     ]
   },
   {
