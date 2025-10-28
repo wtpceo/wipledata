@@ -3,26 +3,6 @@ import Credentials from "next-auth/providers/credentials"
 import type { NextAuthConfig } from "next-auth"
 import { z } from "zod"
 
-// 임시 사용자 데이터 (나중에 Google Sheets와 연동)
-const users = [
-  {
-    id: "1",
-    email: "admin@wtp.com",
-    password: "admin123", // 실제로는 해시된 비밀번호 사용
-    name: "관리자",
-    role: "ADMIN",
-    department: "관리부"
-  },
-  {
-    id: "2",
-    email: "sales@wtp.com",
-    password: "sales123",
-    name: "영업팀장",
-    role: "MANAGER",
-    department: "영업부"
-  }
-]
-
 export const authConfig = {
   pages: {
     signIn: "/login",
@@ -49,19 +29,26 @@ export const authConfig = {
 
         const { email, password } = parsedCredentials.data
 
-        // 임시 로그인 로직 (나중에 Google Sheets와 연동)
-        const user = users.find(u => u.email === email && u.password === password)
+        try {
+          // Google Sheets에서 사용자 인증 - 동적 import 사용
+          const { verifyUser } = await import('./users')
+          const user = await verifyUser(email, password)
 
-        if (!user) {
-          return null
-        }
+          if (!user) {
+            return null
+          }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          department: user.department
+          return {
+            id: user.email,
+            email: user.email,
+            name: user.name,
+            role: user.role.toUpperCase(),
+            department: user.department
+          }
+        } catch (error: any) {
+          console.error('Auth error:', error)
+          // 에러 메시지를 NextAuth에 전달
+          throw new Error(error.message || '로그인에 실패했습니다.')
         }
       }
     })

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { writeToSheet, readFromSheet, SHEETS } from '@/lib/google-sheets'
 
 // GET: 매출 데이터 조회

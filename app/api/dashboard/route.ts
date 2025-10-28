@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { readFromSheet, SHEETS } from '@/lib/google-sheets'
 
 export async function GET(request: NextRequest) {

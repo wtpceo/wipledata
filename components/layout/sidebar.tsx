@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   LayoutDashboard,
   FileText,
@@ -21,9 +22,10 @@ import {
   X
 } from 'lucide-react'
 
-const navigation = [
+const navigationConfig = [
   {
     title: '대시보드',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '전체 현황', href: '/', icon: LayoutDashboard },
       { name: 'KPI 대시보드', href: '/kpi', icon: BarChart3 },
@@ -35,6 +37,7 @@ const navigation = [
   },
   {
     title: '데이터 입력',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '매출 입력', href: '/sales/new', icon: DollarSign },
       { name: 'AE 실적 입력', href: '/ae-performance/new', icon: Award },
@@ -42,6 +45,7 @@ const navigation = [
   },
   {
     title: '경영관리',
+    roles: ['ADMIN', 'MANAGER'], // 관리자, 매니저만
     items: [
       { name: '매출 조회', href: '/sales', icon: FileText },
       { name: '매입 조회', href: '/purchase', icon: FileText },
@@ -52,6 +56,7 @@ const navigation = [
   },
   {
     title: '성과 분석',
+    roles: ['ADMIN', 'MANAGER'], // 관리자, 매니저만
     items: [
       { name: '목표 관리', href: '/goals', icon: Target },
       { name: '전체 수익성 분석', href: '/profitability', icon: TrendingUp },
@@ -60,13 +65,22 @@ const navigation = [
   },
   {
     title: '자료실',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '문서 자료실', href: '/resources', icon: BookOpen },
       { name: '프로세스 가이드', href: '/guides', icon: FileText },
     ]
   },
   {
+    title: '관리',
+    roles: ['ADMIN'], // 관리자만
+    items: [
+      { name: '사용자 관리', href: '/admin/users', icon: Users },
+    ]
+  },
+  {
     title: '설정',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '내 정보', href: '/settings', icon: Settings },
     ]
@@ -80,6 +94,13 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const { data: session } = useSession()
+
+  // 사용자 역할에 따라 메뉴 필터링
+  const userRole = session?.user?.role || 'STAFF'
+  const navigation = navigationConfig.filter(section =>
+    section.roles.includes(userRole)
+  )
 
   return (
     <>
