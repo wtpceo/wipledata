@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
+import { getGoogleAuth } from '@/lib/google-sheets'
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!
 const RANGE = 'Staff!A:F' // 이름, 직급, 부서, 휴대전화, 내선번호, 이메일
 
 async function getGoogleSheetsClient() {
-  const credentials = JSON.parse(
-    Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS!, 'base64').toString()
-  )
-
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  })
-
+  const auth = getGoogleAuth()
   const sheets = google.sheets({ version: 'v4', auth })
   return sheets
 }
