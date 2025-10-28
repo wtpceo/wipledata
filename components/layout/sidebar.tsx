@@ -45,6 +45,15 @@ const navigationConfig = [
     ]
   },
   {
+    title: '조직 정보',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
+    items: [
+      { name: '비상연락망', href: '/emergency-contacts', icon: Users },
+      { name: '회사 웹사이트', href: 'https://www.wiztheplanning.com', icon: FileText, external: true },
+      { name: 'Wiz Works', href: 'https://wizworks.vercel.app/', icon: Wrench, external: true },
+    ]
+  },
+  {
     title: '경영관리',
     roles: ['ADMIN', 'MANAGER'], // 관리자, 매니저만
     items: [
@@ -70,15 +79,6 @@ const navigationConfig = [
     items: [
       { name: '문서 자료실', href: '/resources', icon: BookOpen },
       { name: '프로세스 가이드', href: '/guides', icon: FileText },
-    ]
-  },
-  {
-    title: '조직 정보',
-    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
-    items: [
-      { name: '비상연락망', href: '/emergency-contacts', icon: Users },
-      { name: '회사 웹사이트', href: 'https://www.wiztheplanning.com', icon: FileText, external: true },
-      { name: 'Wiz Works', href: 'https://wizworks.vercel.app/', icon: Wrench, external: true },
     ]
   },
   {
