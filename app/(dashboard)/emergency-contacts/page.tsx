@@ -2,36 +2,41 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Phone, Mail, User, Building2 } from 'lucide-react'
+import { Phone, Mail, User, Building2, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+
+interface StaffMember {
+  name: string
+  position: string
+  department: string
+  phone: string
+  extension: string
+  email: string
+}
 
 export default function EmergencyContactsPage() {
-  // 임시 데이터 - 나중에 Google Sheets나 API로 연동 가능
-  const contacts = [
-    {
-      name: '홍길동',
-      position: '대표이사',
-      department: '경영지원팀',
-      phone: '010-1234-5678',
-      email: 'ceo@wiztheplanning.com',
-      extension: '101'
-    },
-    {
-      name: '김영희',
-      position: '팀장',
-      department: '마케팅팀',
-      phone: '010-2345-6789',
-      email: 'kim@wiztheplanning.com',
-      extension: '201'
-    },
-    {
-      name: '이철수',
-      position: '과장',
-      department: '영업팀',
-      phone: '010-3456-7890',
-      email: 'lee@wiztheplanning.com',
-      extension: '301'
-    },
-  ]
+  const [contacts, setContacts] = useState<StaffMember[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const response = await fetch('/api/staff')
+        if (!response.ok) {
+          throw new Error('데이터를 불러오는데 실패했습니다.')
+        }
+        const data = await response.json()
+        setContacts(data.staff || [])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStaff()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -50,20 +55,33 @@ export default function EmergencyContactsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead>직급</TableHead>
-                  <TableHead>부서</TableHead>
-                  <TableHead>휴대전화</TableHead>
-                  <TableHead>내선번호</TableHead>
-                  <TableHead>이메일</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contacts.map((contact, index) => (
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-500">
+              {error}
+            </div>
+          ) : contacts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              등록된 직원 정보가 없습니다.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>이름</TableHead>
+                    <TableHead>직급</TableHead>
+                    <TableHead>부서</TableHead>
+                    <TableHead>휴대전화</TableHead>
+                    <TableHead>내선번호</TableHead>
+                    <TableHead>이메일</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contacts.map((contact, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
@@ -98,10 +116,11 @@ export default function EmergencyContactsPage() {
                       </a>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
