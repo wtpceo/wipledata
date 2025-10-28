@@ -64,11 +64,16 @@ export async function writeToSheet(range: string, values: any[][]) {
     const existingData = await readFromSheet(`${sheetName}!A:A`)
     const nextRow = existingData.length + 1
 
-    // 열 범위 추출 (예: A:T에서 T 추출)
+    // 열 범위 추출 (예: A:K에서 A와 K 추출)
     const columnRange = range.split('!')[1]
+    const [startCol, endCol] = columnRange.split(':')
 
-    // 다음 행에 정확하게 쓰기
-    const targetRange = `${sheetName}!${columnRange.split(':')[0]}${nextRow}:${columnRange.split(':')[1]}${nextRow}`
+    // 여러 행을 저장할 수 있도록 범위 계산
+    const endRow = nextRow + values.length - 1
+    const targetRange = `${sheetName}!${startCol}${nextRow}:${endCol}${endRow}`
+
+    console.log('Writing to range:', targetRange)
+    console.log('Number of rows:', values.length)
 
     const response = await sheets.spreadsheets.values.update({
       spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID,

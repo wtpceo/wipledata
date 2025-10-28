@@ -154,23 +154,36 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { month, performances, timestamp } = body
 
+    console.log('=== AE Performance Save Request ===')
+    console.log('Month:', month)
+    console.log('Performances count:', performances?.length)
+    console.log('Timestamp:', timestamp)
+
+    if (!month || !performances || !Array.isArray(performances)) {
+      throw new Error('Invalid request data: missing month or performances')
+    }
+
     // Google Sheets에 저장할 데이터 준비
     const dataToSave = performances.map((perf: any) => [
       timestamp,
       month,
-      perf.department,
-      perf.aeName,
-      perf.totalClients,
-      perf.expiringClients,
-      perf.renewedClients,
-      perf.failedRenewals,
-      perf.failureReasons,
-      perf.renewalRevenue,
-      perf.notes
+      perf.department || '',
+      perf.aeName || '',
+      perf.totalClients || 0,
+      perf.expiringClients || 0,
+      perf.renewedClients || 0,
+      perf.failedRenewals || 0,
+      perf.failureReasons || '',
+      perf.renewalRevenue || 0,
+      perf.notes || ''
     ])
+
+    console.log('Data to save:', dataToSave.length, 'rows')
 
     // Google Sheets에 데이터 저장
     await writeToSheet('AEPerformance!A:K', dataToSave)
+
+    console.log('✅ AE Performance data saved successfully')
 
     return NextResponse.json({
       success: true,
@@ -178,9 +191,14 @@ export async function POST(request: NextRequest) {
       count: dataToSave.length
     })
   } catch (error) {
-    console.error('Error saving AE performance data:', error)
+    console.error('❌ Error saving AE performance data:', error)
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { error: 'Failed to save AE performance data' },
+      {
+        error: 'Failed to save AE performance data',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeToSheet, readFromSheet, SHEETS } from '@/lib/google-sheets'
+import { normalizeStaffName } from '@/lib/normalize-staff-name'
 
 // GET: 매출 데이터 조회
 export async function GET(request: NextRequest) {
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
     const rawDataRow = [
       now, // 타임스탬프
       department, // 부서
-      inputPerson, // 입력자
+      normalizeStaffName(inputPerson), // 입력자 - 정규화된 이름
       salesType, // 매출 유형
       clientName, // 광고주 업체명
       finalProductName, // 마케팅 매체 상품명

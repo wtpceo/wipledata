@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFromSheet } from '@/lib/google-sheets'
+import { normalizeStaffName } from '@/lib/normalize-staff-name'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     const salesData = data.map((row) => ({
       timestamp: row[0] || '',
       department: row[1] || '',
-      staff: row[2] || '',
+      staff: normalizeStaffName(row[2] || ''), // 이름 정규화
       salesType: row[3] || '',
       clientName: row[4] || '',
       productName: row[5] || '',

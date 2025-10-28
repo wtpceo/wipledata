@@ -99,15 +99,18 @@ export default function AEPerformanceInputPage() {
         })
       })
 
+      const data = await response.json()
+
       if (response.ok) {
         alert('AE 실적 데이터가 저장되었습니다.')
         router.push('/ae-performance')
       } else {
-        throw new Error('저장 실패')
+        throw new Error(data.error || '저장 실패')
       }
     } catch (error) {
-      alert('저장 중 오류가 발생했습니다.')
-      console.error(error)
+      const errorMessage = error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.'
+      alert(errorMessage)
+      console.error('AE Performance Save Error:', error)
     } finally {
       setLoading(false)
     }

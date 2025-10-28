@@ -37,7 +37,7 @@ const navigationConfig = [
       { name: 'KPI 대시보드', href: '/kpi', icon: BarChart3 },
       { name: '영업 실적', href: '/sales-dashboard', icon: TrendingUp },
       { name: '담당자별 실적', href: '/staff-performance', icon: Users },
-      { name: 'AE 실적', href: '/ae-performance', icon: Award },
+      { name: 'AE 실적 관리', href: '/ae-performance-v2', icon: Award },
       { name: 'AE별 종료 업체 관리', href: '/client-termination', icon: AlertTriangle },
     ]
   },
@@ -46,7 +46,7 @@ const navigationConfig = [
     roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '매출 입력', href: '/sales/new', icon: DollarSign },
-      { name: 'AE 실적 입력', href: '/ae-performance/new', icon: Award },
+      { name: '수동 실적 입력', href: '/ae-performance/manual', icon: Award },
     ]
   },
   {
