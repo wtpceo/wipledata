@@ -20,7 +20,8 @@ import {
   Award,
   AlertTriangle,
   X,
-  Wrench
+  Wrench,
+  Calendar
 } from 'lucide-react'
 
 const navigationConfig = [
@@ -57,6 +58,7 @@ const navigationConfig = [
     title: '경영관리',
     roles: ['ADMIN', 'MANAGER'], // 관리자, 매니저만
     items: [
+      { name: '일자별 매출/매입', href: '/daily-summary', icon: Calendar },
       { name: '매출 조회', href: '/sales', icon: FileText },
       { name: '매입 조회', href: '/purchase', icon: FileText },
       { name: '운영비 조회', href: '/expenses', icon: FileText },
