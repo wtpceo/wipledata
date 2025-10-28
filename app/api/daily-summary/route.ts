@@ -97,55 +97,61 @@ export async function GET(request: NextRequest) {
 
     const sheets = await getGoogleSheetsClient()
 
-    // 매출 데이터 가져오기 (Sales 탭)
+    // 매출 데이터 가져오기 (원본데이터 탭)
+    // 컬럼: 타임스탬프(0), 부서(1), 입력자(2), 매출유형(3), 광고주업체명(4),
+    //       마케팅매체상품명(5), 계약개월수(6), 총계약금액(7), ...계약날짜(14)
     const salesResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Sales!A:E', // 날짜, 광고주, 팀, 내용, 금액
+      range: '원본데이터!A:S', // A부터 S까지 (타임스탬프~순수익)
     })
 
-    // 매입 데이터 가져오기 (Purchase 탭)
+    // 매입 데이터 가져오기 (매입현황 탭)
+    // 컬럼: 타임스탬프(0), 부서(1), 입력자(2), 요청자(3), 매입유형(4),
+    //       거래처명(5), 품목/서비스명(6), 총금액(7), ...거래날짜(10)
     const purchaseResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Purchase!A:E', // 날짜, 광고주, 팀, 내용, 금액
+      range: '매입현황!A:N', // A부터 N까지 (타임스탬프~분기)
     })
 
     const salesRows = salesResponse.data.values || []
     const purchaseRows = purchaseResponse.data.values || []
 
     // 매출 데이터 파싱 (첫 행은 헤더)
+    // 원본데이터: 계약날짜(14), 광고주업체명(4), 부서(1), 마케팅매체상품명(5), 총계약금액(7)
     const salesRecords: SalesRecord[] = []
     for (let i = 1; i < salesRows.length; i++) {
       const row = salesRows[i]
-      const date = parseDate(row[0])
+      const date = parseDate(row[14]) // 계약날짜
       if (!date || date < startDate || date > endDate) continue
 
-      const amount = parseFloat(row[4]?.replace(/[^0-9.-]/g, '') || '0')
-      if (isNaN(amount)) continue
+      const amount = parseFloat(row[7]?.replace(/[^0-9.-]/g, '') || '0') // 총계약금액
+      if (isNaN(amount) || amount === 0) continue
 
       salesRecords.push({
         date: formatDate(date),
-        advertiser: row[1] || '',
-        team: row[2] || '',
-        description: row[3] || '',
+        advertiser: row[4] || '', // 광고주업체명
+        team: row[1] || '', // 부서
+        description: row[5] || '', // 마케팅매체상품명
         amount: amount,
       })
     }
 
     // 매입 데이터 파싱 (첫 행은 헤더)
+    // 매입현황: 거래날짜(10), 거래처명(5), 부서(1), 품목/서비스명(6), 총금액(7)
     const purchaseRecords: PurchaseRecord[] = []
     for (let i = 1; i < purchaseRows.length; i++) {
       const row = purchaseRows[i]
-      const date = parseDate(row[0])
+      const date = parseDate(row[10]) // 거래날짜
       if (!date || date < startDate || date > endDate) continue
 
-      const amount = parseFloat(row[4]?.replace(/[^0-9.-]/g, '') || '0')
-      if (isNaN(amount)) continue
+      const amount = parseFloat(row[7]?.replace(/[^0-9.-]/g, '') || '0') // 총금액
+      if (isNaN(amount) || amount === 0) continue
 
       purchaseRecords.push({
         date: formatDate(date),
-        advertiser: row[1] || '',
-        team: row[2] || '',
-        description: row[3] || '',
+        advertiser: row[5] || '', // 거래처명
+        team: row[1] || '', // 부서
+        description: row[6] || '', // 품목/서비스명
         amount: amount,
       })
     }
