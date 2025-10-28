@@ -72,6 +72,14 @@ const navigationConfig = [
     ]
   },
   {
+    title: '조직 정보',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
+    items: [
+      { name: '비상연락망', href: '/emergency-contacts', icon: Users },
+      { name: '회사 웹사이트', href: 'https://www.wiztheplanning.com', icon: FileText, external: true },
+    ]
+  },
+  {
     title: '관리',
     roles: ['ADMIN'], // 관리자만
     items: [
@@ -137,9 +145,25 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                 {section.title}
               </h3>
               <div className="space-y-1">
-                {section.items.map((item) => {
+                {section.items.map((item: any) => {
                   const Icon = item.icon
                   const isActive = pathname === item.href
+                  const isExternal = item.external === true
+
+                  if (isExternal) {
+                    return (
+                      <a
+                        key={item.name}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.name}
+                      </a>
+                    )
+                  }
 
                   return (
                     <Link
