@@ -21,7 +21,11 @@ import {
   AlertTriangle,
   X,
   Wrench,
-  Calendar
+  Calendar,
+  ExternalLink,
+  Briefcase,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
 
 const navigationConfig = [
@@ -50,8 +54,15 @@ const navigationConfig = [
     roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '비상연락망', href: '/emergency-contacts', icon: Users },
-      { name: '회사 웹사이트', href: 'https://www.wiztheplanning.com', icon: FileText, external: true },
+    ]
+  },
+  {
+    title: '외부 링크',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
+    items: [
+      { name: '회사 웹사이트', href: 'https://www.wiztheplanning.com', icon: ExternalLink, external: true },
       { name: 'Wiz Works', href: 'https://wizworks.vercel.app/', icon: Wrench, external: true },
+      { name: '위플 포트폴리오', href: 'https://obsidian-quit-df6.notion.site/20938318fea6802e83b3c1d2add64777', icon: Briefcase, external: true },
     ]
   },
   {
@@ -107,12 +118,21 @@ interface SidebarProps {
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const [expandedSections, setExpandedSections] = useState<string[]>(['대시보드'])
 
   // 사용자 역할에 따라 메뉴 필터링
   const userRole = session?.user?.role || 'STAFF'
   const navigation = navigationConfig.filter(section =>
     section.roles.includes(userRole)
   )
+
+  const toggleSection = (title: string) => {
+    setExpandedSections(prev =>
+      prev.includes(title)
+        ? prev.filter(t => t !== title)
+        : [...prev, title]
+    )
+  }
 
   return (
     <>
@@ -143,49 +163,64 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         </div>
 
         <nav className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 88px)' }}>
-          {navigation.map((section) => (
-            <div key={section.title} className="mb-6">
-              <h3 className="mb-2 px-2 text-sm font-semibold text-muted-foreground">
-                {section.title}
-              </h3>
-              <div className="space-y-1">
-                {section.items.map((item: any) => {
-                  const Icon = item.icon
-                  const isActive = pathname === item.href
-                  const isExternal = item.external === true
+          {navigation.map((section) => {
+            const isExpanded = expandedSections.includes(section.title)
 
-                  if (isExternal) {
-                    return (
-                      <a
-                        key={item.name}
-                        href={item.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <Icon className="h-4 w-4" />
-                        {item.name}
-                      </a>
-                    )
-                  }
+            return (
+              <div key={section.title} className="mb-2">
+                <button
+                  onClick={() => toggleSection(section.title)}
+                  className="w-full flex items-center justify-between px-2 py-2 text-sm font-semibold text-muted-foreground hover:bg-accent/50 rounded-md transition-colors"
+                >
+                  <span>{section.title}</span>
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
 
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={onClose}
-                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground ${
-                        isActive ? 'bg-accent' : ''
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.name}
-                    </Link>
-                  )
-                })}
+                {isExpanded && (
+                  <div className="mt-1 space-y-1">
+                    {section.items.map((item: any) => {
+                      const Icon = item.icon
+                      const isActive = pathname === item.href
+                      const isExternal = item.external === true
+
+                      if (isExternal) {
+                        return (
+                          <a
+                            key={item.name}
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground ml-2"
+                          >
+                            <Icon className="h-4 w-4" />
+                            {item.name}
+                          </a>
+                        )
+                      }
+
+                      return (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          onClick={onClose}
+                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground ml-2 ${
+                            isActive ? 'bg-accent' : ''
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {item.name}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </nav>
       </div>
     </>
