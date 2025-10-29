@@ -46,7 +46,6 @@ const navigationConfig = [
     roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '매출 입력', href: '/sales/new', icon: DollarSign },
-      { name: '수동 실적 입력', href: '/ae-performance/manual', icon: Award },
     ]
   },
   {

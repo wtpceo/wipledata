@@ -110,6 +110,15 @@ export default function AEPerformanceV2Page() {
     fetchData()
   }, [month])
 
+  // 30초마다 자동 갱신
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData()
+    }, 30000) // 30초
+
+    return () => clearInterval(interval)
+  }, [month])
+
   // 연장 성공/실패 다이얼로그 열기
   const openDialog = (client: ExpiringClient, action: 'renewed' | 'failed') => {
     setSelectedClient(client)
