@@ -61,7 +61,7 @@ export default function AEPerformanceV2Page() {
 
   // 다이얼로그 상태
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogAction, setDialogAction] = useState<'renewed' | 'failed'>('renewed')
+  const [dialogAction, setDialogAction] = useState<'renewed' | 'failed' | 'pending'>('renewed')
   const [selectedClient, setSelectedClient] = useState<ExpiringClient | null>(null)
   const [renewalMonths, setRenewalMonths] = useState(0)
   const [renewalAmount, setRenewalAmount] = useState(0)
@@ -110,17 +110,8 @@ export default function AEPerformanceV2Page() {
     fetchData()
   }, [month])
 
-  // 30초마다 자동 갱신
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData()
-    }, 30000) // 30초
-
-    return () => clearInterval(interval)
-  }, [month])
-
-  // 연장 성공/실패 다이얼로그 열기
-  const openDialog = (client: ExpiringClient, action: 'renewed' | 'failed') => {
+  // 연장 성공/실패/대기 다이얼로그 열기
+  const openDialog = (client: ExpiringClient, action: 'renewed' | 'failed' | 'pending') => {
     setSelectedClient(client)
     setDialogAction(action)
     setRenewalMonths(0)
@@ -461,6 +452,15 @@ export default function AEPerformanceV2Page() {
                               <XCircle className="h-4 w-4 mr-1" />
                               연장 실패
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openDialog(client, 'pending')}
+                              className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                            >
+                              <AlertTriangle className="h-4 w-4 mr-1" />
+                              대기
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -480,7 +480,8 @@ export default function AEPerformanceV2Page() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialogAction === 'renewed' ? '연장 성공 처리' : '연장 실패 처리'}
+              {dialogAction === 'renewed' ? '연장 성공 처리' :
+               dialogAction === 'failed' ? '연장 실패 처리' : '대기 처리'}
             </DialogTitle>
             <DialogDescription>
               {selectedClient?.clientName}
@@ -488,7 +489,14 @@ export default function AEPerformanceV2Page() {
           </DialogHeader>
 
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-            {dialogAction === 'renewed' ? (
+            {dialogAction === 'pending' ? (
+              <div className="py-4">
+                <p className="text-sm text-muted-foreground">
+                  이 광고주를 대기 상태로 유지합니다.<br/>
+                  아무 처리도 하지 않으며, 다음 달에도 종료 예정 목록에 계속 표시됩니다.
+                </p>
+              </div>
+            ) : dialogAction === 'renewed' ? (
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -610,24 +618,26 @@ export default function AEPerformanceV2Page() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              취소
+              {dialogAction === 'pending' ? '닫기' : '취소'}
             </Button>
-            <Button
-              onClick={handleUpdate}
-              disabled={
-                dialogAction === 'renewed' && (
-                  renewalMonths < 1 ||
-                  renewalAmount < 1 ||
-                  productName === '상품을 선택하세요' ||
-                  (productName === '기타' && !productOther) ||
-                  paymentMethod === '결제 방식을 선택하세요' ||
-                  (paymentMethod === '기타' && !paymentMethodOther)
-                )
-              }
-              className={dialogAction === 'renewed' ? 'bg-green-600 hover:bg-green-700' : ''}
-            >
-              {dialogAction === 'renewed' ? '연장 성공 처리' : '연장 실패 처리'}
-            </Button>
+            {dialogAction !== 'pending' && (
+              <Button
+                onClick={handleUpdate}
+                disabled={
+                  dialogAction === 'renewed' && (
+                    renewalMonths < 1 ||
+                    renewalAmount < 1 ||
+                    productName === '상품을 선택하세요' ||
+                    (productName === '기타' && !productOther) ||
+                    paymentMethod === '결제 방식을 선택하세요' ||
+                    (paymentMethod === '기타' && !paymentMethodOther)
+                  )
+                }
+                className={dialogAction === 'renewed' ? 'bg-green-600 hover:bg-green-700' : ''}
+              >
+                {dialogAction === 'renewed' ? '연장 성공 처리' : '연장 실패 처리'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
