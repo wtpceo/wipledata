@@ -29,6 +29,7 @@ interface ExpiringClient {
   renewalMonths: number
   renewalAmount: number
   failureReason: string
+  daysOverdue?: number
 }
 
 interface AEStat {
@@ -56,8 +57,14 @@ export default function AEPerformanceV2Page() {
   const [aeStats, setAeStats] = useState<AEStat[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
 
+  // 미처리 연장 건
+  const [allPendingClients, setAllPendingClients] = useState<ExpiringClient[]>([])
+  const [pendingLoading, setPendingLoading] = useState(false)
+  const [showPending, setShowPending] = useState(false)
+
   // 아코디언 상태 (AE별 펼침/접힘)
   const [expandedAEs, setExpandedAEs] = useState<string[]>([])
+  const [expandedPendingAEs, setExpandedPendingAEs] = useState<string[]>([])
 
   // 다이얼로그 상태
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -78,6 +85,14 @@ export default function AEPerformanceV2Page() {
   // AE 아코디언 토글
   const toggleAE = (aeName: string) => {
     setExpandedAEs(prev =>
+      prev.includes(aeName)
+        ? prev.filter(name => name !== aeName)
+        : [...prev, aeName]
+    )
+  }
+
+  const togglePendingAE = (aeName: string) => {
+    setExpandedPendingAEs(prev =>
       prev.includes(aeName)
         ? prev.filter(name => name !== aeName)
         : [...prev, aeName]
@@ -109,6 +124,27 @@ export default function AEPerformanceV2Page() {
   useEffect(() => {
     fetchData()
   }, [month])
+
+  // 미처리 연장 건 가져오기
+  const fetchAllPending = async () => {
+    try {
+      setPendingLoading(true)
+      const response = await fetch('/api/ae-performance-v2/all-pending')
+      const data = await response.json()
+
+      if (response.ok) {
+        setAllPendingClients(data.pendingClients || [])
+        setShowPending(true)
+      } else {
+        alert('미처리 연장 건을 불러오는데 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('Error fetching all pending:', error)
+      alert('미처리 연장 건을 불러오는 중 오류가 발생했습니다.')
+    } finally {
+      setPendingLoading(false)
+    }
+  }
 
   // 연장 성공/실패/대기 다이얼로그 열기
   const openDialog = (client: ExpiringClient, action: 'renewed' | 'failed' | 'pending') => {
@@ -243,6 +279,124 @@ export default function AEPerformanceV2Page() {
             />
           </div>
         </CardContent>
+      </Card>
+
+      {/* 미처리 연장 건 섹션 */}
+      <Card className="border-orange-200 bg-orange-50">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-orange-900">누적 미처리 연장 건</CardTitle>
+              <CardDescription className="text-orange-700">
+                종료일이 지났지만 아직 연장 처리되지 않은 모든 광고주
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (showPending) {
+                  setShowPending(false)
+                } else {
+                  fetchAllPending()
+                }
+              }}
+              disabled={pendingLoading}
+              className="border-orange-300 hover:bg-orange-100"
+            >
+              {pendingLoading ? '로딩 중...' : showPending ? '숨기기' : '미처리 건 조회'}
+            </Button>
+          </div>
+        </CardHeader>
+        {showPending && (
+          <CardContent>
+            {allPendingClients.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">미처리 연장 건이 없습니다.</p>
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(
+                  allPendingClients.reduce((acc, client) => {
+                    if (!acc[client.aeName]) acc[client.aeName] = []
+                    acc[client.aeName].push(client)
+                    return acc
+                  }, {} as { [key: string]: ExpiringClient[] })
+                ).sort(([a], [b]) => a.localeCompare(b)).map(([aeName, clients]) => {
+                  const isExpanded = expandedPendingAEs.includes(aeName)
+                  return (
+                    <div key={aeName} className="border border-orange-300 rounded-lg bg-white">
+                      <button
+                        onClick={() => togglePendingAE(aeName)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-orange-50 transition-colors rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          {isExpanded ? (
+                            <ChevronDown className="h-5 w-5 text-orange-600" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5 text-orange-600" />
+                          )}
+                          <AlertTriangle className="h-5 w-5 text-orange-600" />
+                          <span className="font-bold text-lg">{aeName}</span>
+                          <span className="text-sm text-orange-700">
+                            ({clients.length}개 미처리)
+                          </span>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-orange-200 p-4 space-y-3">
+                          {clients.map((client) => (
+                            <div
+                              key={`pending-${client.rowIndex}-${client.aeName}`}
+                              className="border border-orange-200 rounded-lg p-4 bg-white"
+                            >
+                              <div className="flex justify-between items-start mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-bold">{client.clientName}</h4>
+                                    {client.isDuplicate && (
+                                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                        중복 (공동담당: {client.duplicateWith.join(', ')})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground space-y-1">
+                                    <p>계약금액: {formatCurrency(client.amount)}</p>
+                                    <p>종료일: {client.endDate}</p>
+                                    <p className="text-orange-600 font-medium">
+                                      ⚠️ {client.daysOverdue}일 경과
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => openDialog(client, 'renewed')}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    연장 성공
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => openDialog(client, 'failed')}
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    연장 실패
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       {/* 전체 요약 */}
