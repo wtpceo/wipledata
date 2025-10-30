@@ -4,7 +4,7 @@ import { getGoogleAuth } from '@/lib/google-sheets'
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!
 
-// 담당자 이름 추출 (이메일 앞부분 제거)
+// 담당자 이름 정규화 (이름만 추출)
 function extractAEName(aeString: string): string[] {
   if (!aeString) return []
 
@@ -13,8 +13,12 @@ function extractAEName(aeString: string): string[] {
 
   return aes.map(ae => {
     // "김민우 팀장 (email@email.com)" -> "김민우 팀장"
-    const match = ae.match(/^([^(]+)/)
-    return match ? match[1].trim() : ae
+    let name = ae.match(/^([^(]+)/)?.[1]?.trim() || ae
+
+    // "김민우 팀장" -> "김민우" (첫 단어만 추출)
+    // 단, 두 글자 성+이름인 경우 고려 (예: 이수빈, 최호천)
+    const firstWord = name.split(/\s+/)[0]
+    return firstWord
   })
 }
 
