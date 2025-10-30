@@ -7,7 +7,7 @@ const INACTIVITY_TIMEOUT = 60 * 60 * 1000 // 1시간 (밀리초)
 
 export function AutoLogout() {
   const { data: session } = useSession()
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   useEffect(() => {
     // 로그인되어 있지 않으면 아무것도 하지 않음
