@@ -238,7 +238,7 @@ export default function AEPerformanceV2Page() {
                     status: dialogAction,
                     renewalMonths: dialogAction === 'renewed' ? renewalMonths : 0,
                     renewalAmount: dialogAction === 'renewed' ? renewalAmount : 0,
-                    failureReason: dialogAction === 'failed' ? failureReason : '',
+                    failureReason: '',
                     endDate: dialogAction === 'renewed' && data.newEndDate ? data.newEndDate : client.endDate
                   }
                 : client
