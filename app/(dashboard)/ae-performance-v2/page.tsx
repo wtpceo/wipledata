@@ -224,21 +224,27 @@ export default function AEPerformanceV2Page() {
       if (response.ok) {
         alert(data.message)
 
-        // 클라이언트 상태 업데이트
-        setExpiringClients(prev =>
-          prev.map(client =>
-            client.rowIndex === selectedClient.rowIndex
-              ? {
-                  ...client,
-                  status: dialogAction,
-                  renewalMonths: dialogAction === 'renewed' ? renewalMonths : 0,
-                  renewalAmount: dialogAction === 'renewed' ? renewalAmount : 0,
-                  failureReason: dialogAction === 'failed' ? failureReason : '',
-                  endDate: dialogAction === 'renewed' && data.newEndDate ? data.newEndDate : client.endDate
-                }
-              : client
+        // 연장 실패 시 목록에서 제거, 그 외에는 상태 업데이트
+        if (dialogAction === 'failed') {
+          setExpiringClients(prev =>
+            prev.filter(client => client.rowIndex !== selectedClient.rowIndex)
           )
-        )
+        } else {
+          setExpiringClients(prev =>
+            prev.map(client =>
+              client.rowIndex === selectedClient.rowIndex
+                ? {
+                    ...client,
+                    status: dialogAction,
+                    renewalMonths: dialogAction === 'renewed' ? renewalMonths : 0,
+                    renewalAmount: dialogAction === 'renewed' ? renewalAmount : 0,
+                    failureReason: dialogAction === 'failed' ? failureReason : '',
+                    endDate: dialogAction === 'renewed' && data.newEndDate ? data.newEndDate : client.endDate
+                  }
+                : client
+            )
+          )
+        }
 
         // 통계 재계산
         fetchData()
