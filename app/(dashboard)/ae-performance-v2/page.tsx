@@ -62,6 +62,9 @@ export default function AEPerformanceV2Page() {
   const [pendingLoading, setPendingLoading] = useState(false)
   const [showPending, setShowPending] = useState(false)
 
+  // 대기 상태 추적 (rowIndex를 key로 사용)
+  const [waitingClients, setWaitingClients] = useState<Set<number>>(new Set())
+
   // 아코디언 상태 (AE별 펼침/접힘)
   const [expandedAEs, setExpandedAEs] = useState<string[]>([])
   const [expandedPendingAEs, setExpandedPendingAEs] = useState<string[]>([])
@@ -160,6 +163,17 @@ export default function AEPerformanceV2Page() {
     setPaymentMethodOther('')
     setApprovalNumber('')
     setOutsourcingCost(0)
+
+    // 대기 처리인 경우 바로 대기 상태로 설정하고 다이얼로그는 닫기
+    if (action === 'pending') {
+      setWaitingClients(prev => new Set([...prev, client.rowIndex]))
+      // 토스트 알림 대신 간단한 알림
+      setTimeout(() => {
+        alert(`${client.clientName}을(를) 대기 상태로 설정했습니다.\n다음 달에도 미처리 건으로 표시됩니다.`)
+      }, 100)
+      return
+    }
+
     setDialogOpen(true)
   }
 
@@ -551,12 +565,15 @@ export default function AEPerformanceV2Page() {
                   {/* 광고주 목록 - 펼쳤을 때만 표시 */}
                   {isExpanded && (
                     <div className="border-t p-4 space-y-3">
-                  {clients.map((client) => (
+                  {clients.map((client) => {
+                    const isWaiting = waitingClients.has(client.rowIndex)
+                    return (
                     <div
                       key={`${client.rowIndex}-${client.aeName}`}
                       className={`border rounded-lg p-4 ${
                         client.status === 'renewed' ? 'bg-green-50 border-green-200' :
-                        client.status === 'failed' ? 'bg-red-50 border-red-200' : ''
+                        client.status === 'failed' ? 'bg-red-50 border-red-200' :
+                        isWaiting ? 'bg-blue-50 border-blue-200' : ''
                       }`}
                     >
                       <div className="flex justify-between items-start mb-3">
@@ -585,9 +602,14 @@ export default function AEPerformanceV2Page() {
                                 {client.failureReason && `: ${client.failureReason}`}
                               </p>
                             )}
+                            {isWaiting && (
+                              <p className="text-blue-600 font-medium">
+                                ⏳ 대기 중 (다음 달에도 표시됨)
+                              </p>
+                            )}
                           </div>
                         </div>
-                        {client.status === 'pending' && (
+                        {client.status === 'pending' && !isWaiting && (
                           <div className="flex gap-2">
                             <Button
                               size="sm"
@@ -619,7 +641,8 @@ export default function AEPerformanceV2Page() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                     </div>
                   )}
                 </div>
