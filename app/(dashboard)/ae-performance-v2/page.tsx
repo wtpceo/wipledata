@@ -164,13 +164,28 @@ export default function AEPerformanceV2Page() {
     setApprovalNumber('')
     setOutsourcingCost(0)
 
-    // 대기 처리인 경우 바로 대기 상태로 설정하고 다이얼로그는 닫기
+    // 대기 처리인 경우 API 호출하여 Google Sheets 업데이트
     if (action === 'pending') {
-      setWaitingClients(prev => new Set([...prev, client.rowIndex]))
-      // 토스트 알림 대신 간단한 알림
-      setTimeout(() => {
-        alert(`${client.clientName}을(를) 대기 상태로 설정했습니다.\n다음 달에도 미처리 건으로 표시됩니다.`)
-      }, 100)
+      try {
+        const response = await fetch('/api/ae-performance-v2/update-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rowIndex: client.rowIndex,
+            action: 'pending'
+          })
+        })
+
+        if (response.ok) {
+          setWaitingClients(prev => new Set([...prev, client.rowIndex]))
+          alert(`${client.clientName}을(를) 대기 상태로 설정했습니다.\n다음 달에도 미처리 건으로 표시됩니다.`)
+        } else {
+          alert('대기 상태 설정에 실패했습니다.')
+        }
+      } catch (error) {
+        console.error('Error setting pending status:', error)
+        alert('대기 상태 설정 중 오류가 발생했습니다.')
+      }
       return
     }
 

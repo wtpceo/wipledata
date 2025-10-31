@@ -168,6 +168,24 @@ async function handleRenewalFailure(rowIndex: number) {
   return { success: true }
 }
 
+// 대기 처리
+async function handlePending(rowIndex: number) {
+  const auth = getGoogleAuth()
+  const sheets = google.sheets({ version: 'v4', auth })
+
+  // Clients 탭의 A열(상태) 업데이트 -> "대기"로 변경
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `Clients!A${rowIndex}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [['대기']]
+    }
+  })
+
+  return { success: true }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -274,9 +292,20 @@ export async function POST(request: NextRequest) {
         failureReason: failureReason || ''
       })
 
+    } else if (action === 'pending') {
+      // 대기 처리
+      result = await handlePending(rowIndex)
+
+      console.log('✅ Client marked as pending')
+
+      return NextResponse.json({
+        success: true,
+        message: '대기 상태로 설정되었습니다.'
+      })
+
     } else {
       return NextResponse.json(
-        { error: 'Invalid action. Must be "renewed" or "failed"' },
+        { error: 'Invalid action. Must be "renewed", "failed", or "pending"' },
         { status: 400 }
       )
     }
