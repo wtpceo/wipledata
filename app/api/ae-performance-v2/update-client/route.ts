@@ -155,13 +155,13 @@ async function handleRenewalFailure(rowIndex: number) {
   const auth = getGoogleAuth()
   const sheets = google.sheets({ version: 'v4', auth })
 
-  // Clients 탭의 A열(상태) 업데이트 -> "종료"로 변경
+  // Clients 탭의 A열(상태) 업데이트 -> "연장 실패"로 변경
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `Clients!A${rowIndex}`,
     valueInputOption: 'USER_ENTERED',
     requestBody: {
-      values: [['종료']]
+      values: [['연장 실패']]
     }
   })
 
