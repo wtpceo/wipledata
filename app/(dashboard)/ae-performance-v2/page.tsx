@@ -581,7 +581,7 @@ export default function AEPerformanceV2Page() {
                   {isExpanded && (
                     <div className="border-t p-4 space-y-3">
                   {clients.map((client) => {
-                    const isWaiting = waitingClients.has(client.rowIndex)
+                    const isWaiting = client.status === 'waiting' || waitingClients.has(client.rowIndex)
                     return (
                     <div
                       key={`${client.rowIndex}-${client.aeName}`}

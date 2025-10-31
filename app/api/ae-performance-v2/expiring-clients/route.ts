@@ -172,6 +172,12 @@ export async function GET(request: NextRequest) {
 
       // 각 담당자별로 광고주 추가
       aeNames.forEach(aeName => {
+        // Google Sheets 상태에 따라 status 결정
+        let clientStatus = 'pending'
+        if (status === '대기') {
+          clientStatus = 'waiting'
+        }
+
         const client = {
           rowIndex: idx + 2, // 실제 시트 행 번호 (헤더 제외)
           clientName,
@@ -180,7 +186,7 @@ export async function GET(request: NextRequest) {
           aeName,
           isDuplicate,
           duplicateWith: isDuplicate ? aeNames.filter(n => n !== aeName) : [],
-          status: 'pending', // pending, renewed, failed
+          status: clientStatus, // pending, renewed, failed, waiting
           renewalMonths: 0,
           renewalAmount: 0,
           failureReason: ''
