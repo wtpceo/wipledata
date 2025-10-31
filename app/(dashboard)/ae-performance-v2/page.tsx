@@ -150,7 +150,7 @@ export default function AEPerformanceV2Page() {
   }
 
   // 연장 성공/실패/대기 다이얼로그 열기
-  const openDialog = (client: ExpiringClient, action: 'renewed' | 'failed' | 'pending') => {
+  const openDialog = async (client: ExpiringClient, action: 'renewed' | 'failed' | 'pending') => {
     setSelectedClient(client)
     setDialogAction(action)
     setRenewalMonths(0)
