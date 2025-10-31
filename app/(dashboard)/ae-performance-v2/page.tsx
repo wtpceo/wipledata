@@ -25,7 +25,7 @@ interface ExpiringClient {
   aeName: string
   isDuplicate: boolean
   duplicateWith: string[]
-  status: 'pending' | 'renewed' | 'failed'
+  status: 'pending' | 'renewed' | 'failed' | 'waiting'
   renewalMonths: number
   renewalAmount: number
   failureReason: string
