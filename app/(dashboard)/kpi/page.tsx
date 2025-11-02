@@ -45,16 +45,16 @@ interface KPIData {
 export default function KPIPage() {
   const [data, setData] = useState<KPIData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState('2025-11')
 
   useEffect(() => {
-    fetchKPIData(selectedYear)
-  }, [selectedYear])
+    fetchKPIData(selectedMonth)
+  }, [selectedMonth])
 
-  const fetchKPIData = async (year: number) => {
+  const fetchKPIData = async (month: string) => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/kpi?year=${year}`)
+      const response = await fetch(`/api/kpi?month=${month}`)
       if (response.ok) {
         const kpiData = await response.json()
         setData(kpiData)
@@ -86,32 +86,21 @@ export default function KPIPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">KPI 대시보드</h2>
           <p className="text-muted-foreground">
             핵심 성과 지표를 통해 비즈니스 성과를 분석하세요
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSelectedYear(selectedYear - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="px-4 py-2 min-w-[100px] text-center font-semibold">
-            {selectedYear}년
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSelectedYear(selectedYear + 1)}
-            disabled={selectedYear >= new Date().getFullYear()}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        <div className="w-full sm:w-auto">
+          <label className="block text-sm font-medium mb-2">월 선택</label>
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="border rounded-md px-3 py-2 w-full sm:w-auto"
+          />
         </div>
       </div>
 

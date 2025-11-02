@@ -31,9 +31,7 @@ interface SalesDashboardData {
 export default function SalesDashboardPage() {
   const [data, setData] = useState<SalesDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().toISOString().substring(0, 7)
-  )
+  const [selectedMonth, setSelectedMonth] = useState('2025-11')
 
   useEffect(() => {
     fetchSalesData(selectedMonth)
@@ -79,12 +77,21 @@ export default function SalesDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">영업 실적</h2>
           <p className="text-muted-foreground">
             영업부 소속 담당자별 실적 현황
           </p>
+        </div>
+        <div className="w-full sm:w-auto">
+          <label className="block text-sm font-medium mb-2">월 선택</label>
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="border rounded-md px-3 py-2 w-full sm:w-auto"
+          />
         </div>
       </div>
 

@@ -163,8 +163,8 @@ export async function GET(request: NextRequest) {
       ? ((currentMonthTotal - prevMonthTotal) / prevMonthTotal * 100)
       : 0
 
-    // 전체 광고주 수 (중복 제거)
-    const uniqueClients = new Set(sales.map(s => s.clientName)).size
+    // 현재 월 광고주 수 (중복 제거)
+    const uniqueClients = new Set(currentMonthSales.map(s => s.clientName)).size
 
     // 목표관리 시트에서 해당 월의 목표 읽기
     let monthlyGoal = 500000000 // 기본값 (목표를 찾을 수 없을 경우)

@@ -4,7 +4,8 @@ import { readFromSheet } from '@/lib/google-sheets'
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
+    const month = searchParams.get('month') || new Date().toISOString().substring(0, 7)
+    const year = parseInt(month.split('-')[0])
 
     // 원본데이터에서 전체 데이터 읽기
     const rawData = await readFromSheet('원본데이터!A2:Z')

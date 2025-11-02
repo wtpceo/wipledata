@@ -106,12 +106,17 @@ export async function GET(request: NextRequest) {
           const date = new Date(normalizedDate)
           if (!isNaN(date.getTime())) {
             const year = date.getFullYear()
-            const month = (date.getMonth() + 1).toString().padStart(2, '0')
-            monthKey = `${year}-${month}`
+            const monthNum = (date.getMonth() + 1).toString().padStart(2, '0')
+            monthKey = `${year}-${monthNum}`
           }
         } catch (error) {
           console.error('Date parsing error:', dateStr, error)
         }
+      }
+
+      // 월별 필터링: month 파라미터가 있으면 해당 월 데이터만 포함
+      if (month && monthKey !== month) {
+        return
       }
 
       // 담당자별 집계

@@ -34,7 +34,7 @@ const navigationConfig = [
     roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '전체 현황', href: '/', icon: LayoutDashboard },
-      { name: 'KPI 대시보드', href: '/kpi', icon: BarChart3 },
+      // { name: 'KPI 대시보드', href: '/kpi', icon: BarChart3 },
       { name: '영업 실적', href: '/sales-dashboard', icon: TrendingUp },
       { name: '담당자별 실적', href: '/staff-performance', icon: Users },
       { name: 'AE 실적 관리', href: '/ae-performance-v2', icon: Award },
