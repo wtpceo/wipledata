@@ -102,12 +102,13 @@ export default function StaffPerformancePage() {
     <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">담당자별 실적</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">영업 실적</h1>
           <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
-            담당자별 매출 및 매출 유형별 분석
+            영업부 소속 담당자별 실적 현황
           </p>
         </div>
         <div className="w-full sm:w-auto">
+          <label className="block text-sm font-medium mb-2">월 선택</label>
           <input
             type="month"
             value={selectedMonth}
