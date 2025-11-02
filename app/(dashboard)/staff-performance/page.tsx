@@ -44,7 +44,7 @@ interface PerformanceData {
 export default function StaffPerformancePage() {
   const [data, setData] = useState<PerformanceData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState('2025-11')
 
   useEffect(() => {
     fetchData()
