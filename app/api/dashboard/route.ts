@@ -168,7 +168,11 @@ export async function GET(request: NextRequest) {
 
     // 목표관리 시트에서 해당 월의 목표 읽기
     let monthlyGoal = 500000000 // 기본값 (목표를 찾을 수 없을 경우)
+    let weeklyGoalSales = 0 // 영업부 주간 목표
+    let weeklyGoalInternal = 0 // 내근직 주간 목표
+
     try {
+      // 월별 목표 읽기 (A2:B)
       const goalsData = await readFromSheet('목표관리!A2:B')
       const goalRow = goalsData.find((row) => {
         const goalMonth = row[0] || ''
@@ -180,12 +184,102 @@ export async function GET(request: NextRequest) {
         const goalString = String(goalRow[1]).replace(/[₩,]/g, '').replace(/원/g, '')
         monthlyGoal = parseFloat(goalString) || 500000000
       }
+
+      // 주간 목표 읽기 (I3:J3)
+      const weeklyGoalsData = await readFromSheet('목표관리!I3:J3')
+      console.log('Weekly goals data from sheet:', weeklyGoalsData)
+
+      if (weeklyGoalsData && weeklyGoalsData.length > 0 && weeklyGoalsData[0]) {
+        // I3 셀: 영업부 주간 목표 (인덱스 0)
+        if (weeklyGoalsData[0][0]) {
+          const salesGoalStr = String(weeklyGoalsData[0][0]).replace(/[₩,]/g, '').replace(/원/g, '').trim()
+          weeklyGoalSales = parseFloat(salesGoalStr) || 0
+          console.log('Sales weekly goal:', weeklyGoalSales)
+        }
+        // J3 셀: 내근직 주간 목표 (인덱스 1)
+        if (weeklyGoalsData[0][1]) {
+          const internalGoalStr = String(weeklyGoalsData[0][1]).replace(/[₩,]/g, '').replace(/원/g, '').trim()
+          weeklyGoalInternal = parseFloat(internalGoalStr) || 0
+          console.log('Internal weekly goal:', weeklyGoalInternal)
+        }
+      }
     } catch (error) {
       console.error('Error reading 목표관리 sheet:', error)
       // 에러 발생 시 기본값 사용
     }
 
     const achievementRate = (currentMonthTotal / monthlyGoal * 100)
+
+    // 주간 매출 계산 (2025-11-01 ~ 2025-11-09)
+    // O열(인덱스 14): 계약 날짜
+    const weekStart = new Date('2025-11-01T00:00:00')
+    const weekEnd = new Date('2025-11-09T23:59:59')
+
+    // 이번 주 영업부 매출 (O열의 계약 날짜 기준)
+    const weekSalesSales = sales.filter(sale => {
+      if (!sale.rawRow || !sale.rawRow[14] || sale.department !== '영업부') return false
+
+      const contractDate = sale.rawRow[14] // O열: 계약 날짜
+      let saleDate: Date | null = null
+
+      try {
+        // 날짜 형식 파싱 (YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD 등)
+        if (contractDate.includes('/')) {
+          const parts = contractDate.split('/')
+          if (parts.length === 3) {
+            const [m, d, y] = parts
+            saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+          }
+        } else if (contractDate.includes('.')) {
+          saleDate = new Date(contractDate.replace(/\./g, '-'))
+        } else if (contractDate.includes('-')) {
+          saleDate = new Date(contractDate)
+        }
+
+        if (saleDate && !isNaN(saleDate.getTime())) {
+          return saleDate >= weekStart && saleDate <= weekEnd
+        }
+      } catch (error) {
+        console.error('Date parsing error:', contractDate, error)
+      }
+
+      return false
+    }).reduce((sum, s) => sum + s.totalAmount, 0)
+
+    // 이번 주 내근직 매출 (O열의 계약 날짜 기준)
+    const weekSalesInternal = sales.filter(sale => {
+      if (!sale.rawRow || !sale.rawRow[14] || sale.department !== '내근직') return false
+
+      const contractDate = sale.rawRow[14] // O열: 계약 날짜
+      let saleDate: Date | null = null
+
+      try {
+        // 날짜 형식 파싱 (YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD 등)
+        if (contractDate.includes('/')) {
+          const parts = contractDate.split('/')
+          if (parts.length === 3) {
+            const [m, d, y] = parts
+            saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+          }
+        } else if (contractDate.includes('.')) {
+          saleDate = new Date(contractDate.replace(/\./g, '-'))
+        } else if (contractDate.includes('-')) {
+          saleDate = new Date(contractDate)
+        }
+
+        if (saleDate && !isNaN(saleDate.getTime())) {
+          return saleDate >= weekStart && saleDate <= weekEnd
+        }
+      } catch (error) {
+        console.error('Date parsing error:', contractDate, error)
+      }
+
+      return false
+    }).reduce((sum, s) => sum + s.totalAmount, 0)
+
+    // 주간 목표 달성률
+    const weeklyAchievementSales = weeklyGoalSales > 0 ? (weekSalesSales / weeklyGoalSales * 100) : 0
+    const weeklyAchievementInternal = weeklyGoalInternal > 0 ? (weekSalesInternal / weeklyGoalInternal * 100) : 0
 
     return NextResponse.json({
       overview: {
@@ -199,6 +293,18 @@ export async function GET(request: NextRequest) {
         achievementRate: Math.round(achievementRate * 10) / 10,
         monthlyGoal,
         currentMonth: month,
+      },
+      weeklyGoals: {
+        sales: {
+          goal: weeklyGoalSales,
+          current: weekSalesSales,
+          achievementRate: Math.round(weeklyAchievementSales * 10) / 10
+        },
+        internal: {
+          goal: weeklyGoalInternal,
+          current: weekSalesInternal,
+          achievementRate: Math.round(weeklyAchievementInternal * 10) / 10
+        }
       },
       departmentSales: Object.entries(departmentSales).map(([name, amount]) => ({
         name,

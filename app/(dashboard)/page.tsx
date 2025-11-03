@@ -18,6 +18,18 @@ interface DashboardData {
     monthlyGoal: number
     currentMonth: string
   }
+  weeklyGoals?: {
+    sales: {
+      goal: number
+      current: number
+      achievementRate: number
+    }
+    internal: {
+      goal: number
+      current: number
+      achievementRate: number
+    }
+  }
   departmentSales: { name: string; amount: number }[]
   salesPersonStats: { name: string; amount: number }[]
   productSales: { name: string; amount: number }[]
@@ -197,6 +209,89 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 주간 목표 섹션 */}
+      {data?.weeklyGoals && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* 영업부 주간 목표 */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">영업부 주간 목표 달성률</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                <span className={
+                  data.weeklyGoals.sales.achievementRate >= 100
+                    ? "text-green-600"
+                    : data.weeklyGoals.sales.achievementRate >= 80
+                      ? "text-yellow-600"
+                      : "text-red-600"
+                }>
+                  {data.weeklyGoals.sales.achievementRate}%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                목표: {formatCurrency(data.weeklyGoals.sales.goal)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                현재: {formatCurrency(data.weeklyGoals.sales.current)}
+              </p>
+              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${
+                    data.weeklyGoals.sales.achievementRate >= 100
+                      ? "bg-green-600"
+                      : data.weeklyGoals.sales.achievementRate >= 80
+                        ? "bg-yellow-600"
+                        : "bg-red-600"
+                  }`}
+                  style={{ width: `${Math.min(100, data.weeklyGoals.sales.achievementRate)}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 내근직 주간 목표 */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">내근직 주간 목표 달성률</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                <span className={
+                  data.weeklyGoals.internal.achievementRate >= 100
+                    ? "text-green-600"
+                    : data.weeklyGoals.internal.achievementRate >= 80
+                      ? "text-yellow-600"
+                      : "text-red-600"
+                }>
+                  {data.weeklyGoals.internal.achievementRate}%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                목표: {formatCurrency(data.weeklyGoals.internal.goal)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                현재: {formatCurrency(data.weeklyGoals.internal.current)}
+              </p>
+              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${
+                    data.weeklyGoals.internal.achievementRate >= 100
+                      ? "bg-green-600"
+                      : data.weeklyGoals.internal.achievementRate >= 80
+                        ? "bg-yellow-600"
+                        : "bg-red-600"
+                  }`}
+                  style={{ width: `${Math.min(100, data.weeklyGoals.internal.achievementRate)}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* 차트 영역 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
