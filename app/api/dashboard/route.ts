@@ -247,8 +247,9 @@ export async function GET(request: NextRequest) {
     }).reduce((sum, s) => sum + s.totalAmount, 0)
 
     // 이번 주 내근직 매출 (O열의 계약 날짜 기준)
+    // 영업부를 제외한 모든 부서를 내근직으로 간주
     const weekSalesInternal = sales.filter(sale => {
-      if (!sale.rawRow || !sale.rawRow[14] || sale.department !== '내근직') return false
+      if (!sale.rawRow || !sale.rawRow[14] || sale.department === '영업부') return false
 
       const contractDate = sale.rawRow[14] // O열: 계약 날짜
       let saleDate: Date | null = null
