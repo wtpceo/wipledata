@@ -25,7 +25,8 @@ import {
   ExternalLink,
   Briefcase,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  AlertCircle
 } from 'lucide-react'
 
 const navigationConfig = [
@@ -39,6 +40,7 @@ const navigationConfig = [
       { name: '담당자별 실적', href: '/staff-performance', icon: Users },
       { name: 'AE 실적 관리', href: '/ae-performance-v2', icon: Award },
       { name: 'AE별 종료 업체 관리', href: '/client-termination', icon: AlertTriangle },
+      { name: '클라임 대시보드', href: '/claim-dashboard', icon: AlertCircle },
     ]
   },
   {
