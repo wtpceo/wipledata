@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
-import { getGoogleAuth } from '@/lib/google-sheets'
+import { getGoogleAuth, readFromSheet } from '@/lib/google-sheets'
+import { normalizeStaffName } from '@/lib/normalize-staff-name'
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!
 
@@ -70,6 +71,27 @@ export async function GET(request: NextRequest) {
 
     // 첫 행은 헤더
     const [headers, ...dataRows] = rows
+
+    // 원본데이터에서 연장 실적 읽기 (타임스탬프 기반)
+    const rawData = await readFromSheet('원본데이터!A2:K')
+    const renewalSales = rawData
+      .filter(row => row[3] === '연장') // D열: 매출 유형
+      .map(row => {
+        const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0 // H열: 총계약금액
+        const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0 // K열: 확정 외주비
+        const department = row[1] || '' // B열: 부서
+
+        // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
+        const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+
+        return {
+          timestamp: row[0] || '', // A열: 타임스탬프
+          department: department,
+          aeName: normalizeStaffName(row[2] || ''), // C열: 담당자
+          clientName: row[4] || '', // E열: 광고주명
+          totalAmount: actualAmount,
+        }
+      })
 
     // 타겟 월 설정 (파라미터가 없으면 현재 월)
     let targetMonth: number
@@ -202,16 +224,70 @@ export async function GET(request: NextRequest) {
       })
     })
 
+    // 해당 월의 연장 성공 건수 계산 (원본데이터 기반, 타임스탬프 사용)
+    const monthlyRenewals = renewalSales.filter(sale => {
+      if (!sale.timestamp) return false
+
+      try {
+        let saleDate: Date | null = null
+
+        // ISO 형식 (2024-11-03T12:34:56.789Z)
+        if (sale.timestamp.includes('T')) {
+          saleDate = new Date(sale.timestamp)
+        }
+        // MM/DD/YYYY 형식
+        else if (sale.timestamp.includes('/')) {
+          const parts = sale.timestamp.split('/')
+          if (parts.length === 3) {
+            const [m, d, y] = parts
+            saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+          }
+        }
+        // YYYY.MM.DD 형식
+        else if (sale.timestamp.includes('.')) {
+          saleDate = new Date(sale.timestamp.replace(/\./g, '-'))
+        }
+        // YYYY-MM-DD 형식
+        else if (sale.timestamp.includes('-')) {
+          saleDate = new Date(sale.timestamp)
+        }
+
+        if (!saleDate || isNaN(saleDate.getTime())) return false
+
+        return saleDate.getMonth() === targetMonth && saleDate.getFullYear() === targetYear
+      } catch {
+        return false
+      }
+    })
+
+    // AE별 연장 성공 건수 맵 생성
+    const aeRenewalMap = new Map<string, { count: number; amount: number }>()
+    monthlyRenewals.forEach(sale => {
+      if (!aeRenewalMap.has(sale.aeName)) {
+        aeRenewalMap.set(sale.aeName, { count: 0, amount: 0 })
+      }
+      const stats = aeRenewalMap.get(sale.aeName)!
+      stats.count += 1
+      stats.amount += sale.totalAmount
+    })
+
+    console.log('=== Renewal Stats Debug ===')
+    console.log('Target month:', `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`)
+    console.log('Total renewal sales in raw data:', renewalSales.length)
+    console.log('Renewals in target month:', monthlyRenewals.length)
+    console.log('AEs with renewals:', Array.from(aeRenewalMap.keys()))
+
     // AE별 통계 계산 - 모든 AE 포함 (종료 예정이 0개인 AE도 포함)
     const aeStats = Array.from(aeTotalClientsMap.keys()).map((aeName) => {
       const clients = aeClientsMap.get(aeName) || []
       const expiringCount = clients.length
-      const renewedClients = clients.filter(c => c.status === 'renewed').length
       const failedClients = clients.filter(c => c.status === 'failed').length
-      const pendingClients = clients.filter(c => c.status === 'pending').length
-      const totalRenewalAmount = clients
-        .filter(c => c.status === 'renewed')
-        .reduce((sum, c) => sum + c.renewalAmount, 0)
+      const pendingClients = clients.filter(c => c.status === 'pending').length || clients.filter(c => c.status === 'waiting').length
+
+      // 원본데이터 기반 연장 성공 건수 및 매출
+      const renewalStats = aeRenewalMap.get(aeName) || { count: 0, amount: 0 }
+      const renewedClients = renewalStats.count
+      const totalRenewalAmount = renewalStats.amount
 
       // 전체 광고주 수 (진행 중인 모든 광고주)
       const totalClients = aeTotalClientsMap.get(aeName)?.size || 0
@@ -220,7 +296,7 @@ export async function GET(request: NextRequest) {
         aeName,
         totalClients, // 전체 광고주 수
         expiringClients: expiringCount, // 종료 예정 광고주 수
-        renewedClients,
+        renewedClients, // 원본데이터 기반 연장 성공
         failedClients,
         pendingClients,
         totalRenewalAmount,

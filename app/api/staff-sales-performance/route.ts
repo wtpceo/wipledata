@@ -16,28 +16,37 @@ export async function GET(request: NextRequest) {
     const data = await readFromSheet('원본데이터!A2:T')
 
     // 데이터 파싱
-    const salesData = data.map((row) => ({
-      timestamp: row[0] || '',
-      department: row[1] || '',
-      staff: normalizeStaffName(row[2] || ''), // 이름 정규화
-      salesType: row[3] || '',
-      clientName: row[4] || '',
-      productName: row[5] || '',
-      contractMonths: parseInt(row[6] || '0'),
-      totalAmount: parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0,
-      paymentMethod: row[8] || '',
-      approvalNumber: row[9] || '',
-      outsourcingCost: parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0,
-      consultationContent: row[11] || '',
-      specialNotes: row[12] || '',
-      contractFile: row[13] || '',
-      contractDate: row[14] || '',
-      contractEndDate: row[15] || '',
-      monthlyAmount: parseFloat(String(row[16] || '0').replace(/[^\d.-]/g, '')) || 0,
-      netProfit: parseFloat(String(row[17] || '0').replace(/[^\d.-]/g, '')) || 0,
-      inputYearMonth: row[18] || '',
-      quarter: row[19] || ''
-    }))
+    const salesData = data.map((row) => {
+      const department = row[1] || ''
+      const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0
+      const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0
+
+      // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
+      const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+
+      return {
+        timestamp: row[0] || '',
+        department: department,
+        staff: normalizeStaffName(row[2] || ''), // 이름 정규화
+        salesType: row[3] || '',
+        clientName: row[4] || '',
+        productName: row[5] || '',
+        contractMonths: parseInt(row[6] || '0'),
+        totalAmount: actualAmount,
+        paymentMethod: row[8] || '',
+        approvalNumber: row[9] || '',
+        outsourcingCost: outsourcingCost,
+        consultationContent: row[11] || '',
+        specialNotes: row[12] || '',
+        contractFile: row[13] || '',
+        contractDate: row[14] || '',
+        contractEndDate: row[15] || '',
+        monthlyAmount: parseFloat(String(row[16] || '0').replace(/[^\d.-]/g, '')) || 0,
+        netProfit: parseFloat(String(row[17] || '0').replace(/[^\d.-]/g, '')) || 0,
+        inputYearMonth: row[18] || '',
+        quarter: row[19] || ''
+      }
+    })
 
     // 필터링
     let filteredData = salesData
@@ -54,15 +63,24 @@ export async function GET(request: NextRequest) {
           try {
             let saleDate: Date | null = null
 
-            if (s.timestamp.includes('/')) {
+            // ISO 형식 (2024-11-03T12:34:56.789Z)
+            if (s.timestamp.includes('T')) {
+              saleDate = new Date(s.timestamp)
+            }
+            // MM/DD/YYYY 형식
+            else if (s.timestamp.includes('/')) {
               const parts = s.timestamp.split('/')
               if (parts.length === 3) {
                 const [m, d, y] = parts
                 saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
               }
-            } else if (s.timestamp.includes('.')) {
+            }
+            // YYYY.MM.DD 형식
+            else if (s.timestamp.includes('.')) {
               saleDate = new Date(s.timestamp.replace(/\./g, '-'))
-            } else if (s.timestamp.includes('-')) {
+            }
+            // YYYY-MM-DD 형식
+            else if (s.timestamp.includes('-')) {
               saleDate = new Date(s.timestamp)
             }
 

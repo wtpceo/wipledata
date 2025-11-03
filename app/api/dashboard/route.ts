@@ -33,19 +33,24 @@ export async function GET(request: NextRequest) {
       // S열(인덱스 18): 입력 월, H열(인덱스 7): 총 계약금액, F열(인덱스 5): 매체, C열(인덱스 2): 입력자
       const monthValue = row[18] || ''
       const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0
+      const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0 // K열: 확정 외주비
+      const department = row[1] || '' // B열: 부서
       const marketingProduct = row[5] || '' // F열: 마케팅 매체 상품명
       const inputPerson = row[2] || '' // C열: 입력자
+
+      // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
+      const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
 
       // 다른 필요한 데이터
       return {
         date: row[0] || '',
-        department: row[1] || '',
+        department: department,
         inputPerson: inputPerson,
         contractType: row[3] || '',
         clientName: row[4] || '',
         productName: marketingProduct,
         contractMonths: parseInt(row[6]) || 0,
-        totalAmount: contractAmount,
+        totalAmount: actualAmount,
         salesPerson: row[9] || '',
         inputMonth: monthValue,
         rawRow: row
@@ -83,15 +88,24 @@ export async function GET(request: NextRequest) {
         try {
           let saleDate: Date | null = null
 
-          if (timestamp.includes('/')) {
+          // ISO 형식 (2024-11-03T12:34:56.789Z)
+          if (timestamp.includes('T')) {
+            saleDate = new Date(timestamp)
+          }
+          // MM/DD/YYYY 형식
+          else if (timestamp.includes('/')) {
             const parts = timestamp.split('/')
             if (parts.length === 3) {
               const [m, d, y] = parts
               saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
             }
-          } else if (timestamp.includes('.')) {
+          }
+          // YYYY.MM.DD 형식
+          else if (timestamp.includes('.')) {
             saleDate = new Date(timestamp.replace(/\./g, '-'))
-          } else if (timestamp.includes('-')) {
+          }
+          // YYYY-MM-DD 형식
+          else if (timestamp.includes('-')) {
             saleDate = new Date(timestamp)
           }
 
@@ -136,15 +150,24 @@ export async function GET(request: NextRequest) {
         try {
           let saleDate: Date | null = null
 
-          if (timestamp.includes('/')) {
+          // ISO 형식 (2024-11-03T12:34:56.789Z)
+          if (timestamp.includes('T')) {
+            saleDate = new Date(timestamp)
+          }
+          // MM/DD/YYYY 형식
+          else if (timestamp.includes('/')) {
             const parts = timestamp.split('/')
             if (parts.length === 3) {
               const [m, d, y] = parts
               saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
             }
-          } else if (timestamp.includes('.')) {
+          }
+          // YYYY.MM.DD 형식
+          else if (timestamp.includes('.')) {
             saleDate = new Date(timestamp.replace(/\./g, '-'))
-          } else if (timestamp.includes('-')) {
+          }
+          // YYYY-MM-DD 형식
+          else if (timestamp.includes('-')) {
             saleDate = new Date(timestamp)
           }
 
@@ -310,16 +333,24 @@ export async function GET(request: NextRequest) {
       let saleDate: Date | null = null
 
       try {
-        // 타임스탬프 형식 파싱 (YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD 등)
-        if (timestamp.includes('/')) {
+        // ISO 형식 (2024-11-03T12:34:56.789Z)
+        if (timestamp.includes('T')) {
+          saleDate = new Date(timestamp)
+        }
+        // MM/DD/YYYY 형식
+        else if (timestamp.includes('/')) {
           const parts = timestamp.split('/')
           if (parts.length === 3) {
             const [m, d, y] = parts
             saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
           }
-        } else if (timestamp.includes('.')) {
+        }
+        // YYYY.MM.DD 형식
+        else if (timestamp.includes('.')) {
           saleDate = new Date(timestamp.replace(/\./g, '-'))
-        } else if (timestamp.includes('-')) {
+        }
+        // YYYY-MM-DD 형식
+        else if (timestamp.includes('-')) {
           saleDate = new Date(timestamp)
         }
 

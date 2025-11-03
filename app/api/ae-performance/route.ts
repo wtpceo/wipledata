@@ -45,29 +45,66 @@ export async function GET(request: NextRequest) {
     // 원본데이터에서 연장 매출 파싱 (D열 = '연장')
     const renewalSales = rawData
       .filter(row => row[3] === '연장') // D열: 매출 유형
-      .map(row => ({
-        timestamp: row[0] || '', // A열: 타임스탬프
-        department: row[1] || '', // B열: 부서
-        aeName: normalizeStaffName(row[2] || ''), // C열: 담당자 (정규화)
-        salesType: row[3] || '', // D열: 매출 유형
-        clientName: row[4] || '', // E열: 광고주명
-        totalAmount: parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0, // H열: 총계약금액
-      }))
+      .map(row => {
+        const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0 // H열: 총계약금액
+        const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0 // K열: 확정 외주비
+        const department = row[1] || '' // B열: 부서
+
+        // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
+        const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+
+        return {
+          timestamp: row[0] || '', // A열: 타임스탬프
+          department: department,
+          aeName: normalizeStaffName(row[2] || ''), // C열: 담당자 (정규화)
+          salesType: row[3] || '', // D열: 매출 유형
+          clientName: row[4] || '', // E열: 광고주명
+          totalAmount: actualAmount,
+        }
+      })
+
+    console.log('=== AE Performance Debug ===')
+    console.log('Total renewal sales found:', renewalSales.length)
+    if (renewalSales.length > 0) {
+      console.log('Sample renewal (first 3):')
+      renewalSales.slice(0, 3).forEach((sale, idx) => {
+        console.log(`  ${idx + 1}. AE: ${sale.aeName}, Timestamp: ${sale.timestamp}, Amount: ${sale.totalAmount}`)
+      })
+    }
 
     // 원본데이터에서 연장 성공을 월별로 그룹화
     const renewalsByMonth = new Map<string, any[]>()
+    let parsedCount = 0
+    let failedCount = 0
+
     renewalSales.forEach(sale => {
-      if (!sale.timestamp) return
+      if (!sale.timestamp) {
+        failedCount++
+        return
+      }
 
       const saleDate = parseDate(sale.timestamp)
-      if (!saleDate || isNaN(saleDate.getTime())) return
+      if (!saleDate || isNaN(saleDate.getTime())) {
+        console.log('Failed to parse timestamp:', sale.timestamp)
+        failedCount++
+        return
+      }
 
+      parsedCount++
       const saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
 
       if (!renewalsByMonth.has(saleMonth)) {
         renewalsByMonth.set(saleMonth, [])
       }
       renewalsByMonth.get(saleMonth)!.push(sale)
+    })
+
+    console.log('Timestamp parsing results:')
+    console.log('  Successfully parsed:', parsedCount)
+    console.log('  Failed to parse:', failedCount)
+    console.log('  Months with renewals:', Array.from(renewalsByMonth.keys()).sort())
+    renewalsByMonth.forEach((sales, month) => {
+      console.log(`  ${month}: ${sales.length} renewals`)
     })
 
     // Clients 탭에서 전체 광고주와 연장 실패 파싱
