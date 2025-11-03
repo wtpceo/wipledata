@@ -1,129 +1,221 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeToSheet, readFromSheet } from '@/lib/google-sheets'
+import { normalizeStaffName } from '@/lib/normalize-staff-name'
+
+// 날짜 파싱 함수
+function parseDate(dateStr: string): Date | null {
+  if (!dateStr) return null
+
+  try {
+    // ISO 형식
+    if (dateStr.includes('T')) {
+      return new Date(dateStr)
+    }
+    // YYYY.MM.DD 형식
+    if (/^\d{4}\.\d{1,2}\.\d{1,2}$/.test(dateStr)) {
+      const [year, month, day] = dateStr.split('.')
+      return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+    }
+    // MM/DD/YYYY 형식
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/')
+      if (parts.length === 3) {
+        const [m, d, y] = parts
+        return new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+      }
+    }
+    // YYYY-MM-DD 형식
+    return new Date(dateStr)
+  } catch {
+    return null
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const month = searchParams.get('month')
+    const month = searchParams.get('month') // YYYY-MM 형식
 
-    // Google Sheets에서 AE 실적 데이터 읽기
-    // 시트 구조: A열(날짜), B열(월), C열(부서), D열(AE이름), E열(총광고주), F열(종료예정),
-    // G열(연장성공), H열(연장실패), I열(실패사유), J열(연장매출), K열(비고)
-    const data = await readFromSheet('AEPerformance!A2:K')
+    // 원본데이터에서 연장 실적 데이터 읽기
+    const rawData = await readFromSheet('원본데이터!A2:T')
 
-    const performances = data.map((row) => ({
-      timestamp: row[0] || '',
-      month: row[1] || '',
-      department: row[2] || '',
-      aeName: row[3] || '',
-      totalClients: parseInt(row[4] || '0'),
-      expiringClients: parseInt(row[5] || '0'),
-      renewedClients: parseInt(row[6] || '0'),
-      failedRenewals: parseInt(row[7] || '0'),
-      failureReasons: row[8] || '',
-      renewalRevenue: parseFloat(String(row[9] || '0').replace(/[^\d.-]/g, '')) || 0,
-      notes: row[10] || ''
-    }))
+    // Clients 탭에서 전체 광고주 및 연장 실패 데이터 읽기
+    const clientsData = await readFromSheet('clients!A:F')
 
-    // 월별 필터링 (선택사항)
-    let filteredData = performances
-    if (month) {
-      filteredData = performances.filter(p => p.month === month)
-    }
+    // 원본데이터에서 연장 매출 파싱 (D열 = '연장')
+    const renewalSales = rawData
+      .filter(row => row[3] === '연장') // D열: 매출 유형
+      .map(row => ({
+        timestamp: row[0] || '', // A열: 타임스탬프
+        department: row[1] || '', // B열: 부서
+        aeName: normalizeStaffName(row[2] || ''), // C열: 담당자 (정규화)
+        salesType: row[3] || '', // D열: 매출 유형
+        clientName: row[4] || '', // E열: 광고주명
+        totalAmount: parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0, // H열: 총계약금액
+      }))
 
-    // 월별 그룹화
-    const groupedByMonth = filteredData.reduce((acc, perf) => {
-      if (!acc[perf.month]) {
-        acc[perf.month] = []
+    // 원본데이터에서 연장 성공을 월별로 그룹화
+    const renewalsByMonth = new Map<string, any[]>()
+    renewalSales.forEach(sale => {
+      if (!sale.timestamp) return
+
+      const saleDate = parseDate(sale.timestamp)
+      if (!saleDate || isNaN(saleDate.getTime())) return
+
+      const saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
+
+      if (!renewalsByMonth.has(saleMonth)) {
+        renewalsByMonth.set(saleMonth, [])
       }
-      acc[perf.month].push(perf)
-      return acc
-    }, {} as { [key: string]: any[] })
+      renewalsByMonth.get(saleMonth)!.push(sale)
+    })
 
-    // 각 월별 통계 계산
-    const monthlyStats = Object.entries(groupedByMonth).map(([month, perfs]) => {
-      const totalAEs = new Set(perfs.map(p => p.aeName)).size
-      const totalClients = perfs.reduce((sum, p) => sum + p.totalClients, 0)
-      const totalExpiring = perfs.reduce((sum, p) => sum + p.expiringClients, 0)
-      const totalRenewed = perfs.reduce((sum, p) => sum + p.renewedClients, 0)
-      const totalFailed = perfs.reduce((sum, p) => sum + p.failedRenewals, 0)
-      const totalRevenue = perfs.reduce((sum, p) => sum + p.renewalRevenue, 0)
-      const renewalRate = totalExpiring > 0 ? (totalRenewed / totalExpiring * 100) : 0
+    // Clients 탭에서 전체 광고주와 연장 실패 파싱
+    const [clientsHeaders, ...clientsRows] = clientsData
 
-      return {
-        month,
-        totalAEs,
-        totalClients,
-        totalExpiring,
-        totalRenewed,
-        totalFailed,
-        totalRevenue,
-        renewalRate: Math.round(renewalRate * 10) / 10,
-        performances: perfs
+    // 진행 중인 광고주로 AE별 총 광고주 수 계산
+    const aeTotalClientsMap = new Map<string, Set<string>>()
+    clientsRows.forEach(row => {
+      const status = row[0] || ''
+      const clientName = row[1] || ''
+      const aeString = row[2] || ''
+
+      if (status === '진행' && clientName && aeString) {
+        const aeName = normalizeStaffName(aeString)
+        if (!aeTotalClientsMap.has(aeName)) {
+          aeTotalClientsMap.set(aeName, new Set())
+        }
+        aeTotalClientsMap.get(aeName)!.add(clientName)
       }
-    }).sort((a, b) => b.month.localeCompare(a.month))
+    })
 
-    // 최신 월 데이터에서 AE별 랭킹 계산
+    // 연장 실패 데이터
+    const failedRenewals = clientsRows
+      .filter(row => row[0] === '연장 실패')
+      .map(row => ({
+        clientName: row[1] || '',
+        ae: normalizeStaffName(row[2] || ''),
+      }))
+
+    // 월별 통계 생성
+    const monthlyStats = Array.from(renewalsByMonth.keys())
+      .sort((a, b) => b.localeCompare(a)) // 최신 월부터
+      .map(month => {
+        const monthRenewals = renewalsByMonth.get(month) || []
+
+        // 해당 월의 AE별 실적
+        const aeMonthPerformances = new Map<string, any>()
+
+        monthRenewals.forEach(sale => {
+          if (!aeMonthPerformances.has(sale.aeName)) {
+            const totalClients = aeTotalClientsMap.get(sale.aeName)?.size || 0
+            aeMonthPerformances.set(sale.aeName, {
+              aeName: sale.aeName,
+              department: sale.department,
+              totalClients: totalClients,
+              expiringClients: 0, // 종료 예정은 현재 시스템에서 추적하지 않음
+              renewedClients: 0,
+              failedRenewals: 0,
+              renewalRevenue: 0
+            })
+          }
+          const perf = aeMonthPerformances.get(sale.aeName)!
+          perf.renewedClients += 1
+          perf.renewalRevenue += sale.totalAmount
+        })
+
+        // 연장 실패 추가
+        failedRenewals.forEach(failure => {
+          if (!aeMonthPerformances.has(failure.ae)) {
+            const totalClients = aeTotalClientsMap.get(failure.ae)?.size || 0
+            aeMonthPerformances.set(failure.ae, {
+              aeName: failure.ae,
+              department: '',
+              totalClients: totalClients,
+              expiringClients: 0,
+              renewedClients: 0,
+              failedRenewals: 0,
+              renewalRevenue: 0
+            })
+          }
+          const perf = aeMonthPerformances.get(failure.ae)!
+          perf.failedRenewals += 1
+        })
+
+        const performances = Array.from(aeMonthPerformances.values())
+        const totalRenewed = performances.reduce((sum, p) => sum + p.renewedClients, 0)
+        const totalFailed = performances.reduce((sum, p) => sum + p.failedRenewals, 0)
+        const totalExpiring = totalRenewed + totalFailed
+        const renewalRate = totalExpiring > 0 ? Math.round((totalRenewed / totalExpiring) * 100 * 10) / 10 : 0
+
+        return {
+          month,
+          totalAEs: performances.length,
+          totalClients: performances.reduce((sum, p) => sum + p.totalClients, 0),
+          totalExpiring,
+          totalRenewed,
+          totalFailed,
+          totalRevenue: performances.reduce((sum, p) => sum + p.renewalRevenue, 0),
+          renewalRate,
+          performances
+        }
+      })
+
+    // 최신 월 또는 지정된 월의 데이터로 랭킹 생성
     let aeRankings: any[] = []
     let departmentStats: any[] = []
 
-    if (monthlyStats.length > 0) {
-      const latestMonth = monthlyStats[0]
-      const aePerformances = latestMonth.performances.reduce((acc, perf) => {
-        if (!acc[perf.aeName]) {
-          acc[perf.aeName] = {
-            aeName: perf.aeName,
-            department: perf.department,
-            totalClients: 0,
-            renewedClients: 0,
-            failedRenewals: 0,
-            renewalRevenue: 0,
-            renewalRate: 0
-          }
-        }
-        acc[perf.aeName].totalClients += perf.totalClients
-        acc[perf.aeName].renewedClients += perf.renewedClients
-        acc[perf.aeName].failedRenewals += perf.failedRenewals
-        acc[perf.aeName].renewalRevenue += perf.renewalRevenue
+    const targetMonthStats = month
+      ? monthlyStats.find(m => m.month === month) || monthlyStats[0]
+      : monthlyStats[0]
 
-        const expiring = perf.expiringClients
-        if (expiring > 0) {
-          acc[perf.aeName].renewalRate = (perf.renewedClients / expiring * 100)
-        }
-        return acc
-      }, {} as { [key: string]: any })
-
-      aeRankings = Object.values(aePerformances)
+    if (targetMonthStats) {
+      // AE 랭킹
+      aeRankings = targetMonthStats.performances
+        .map((perf: any) => ({
+          aeName: perf.aeName,
+          department: perf.department,
+          totalClients: perf.totalClients,
+          renewedClients: perf.renewedClients,
+          failedRenewals: perf.failedRenewals,
+          renewalRevenue: perf.renewalRevenue,
+          renewalRate: (perf.renewedClients + perf.failedRenewals) > 0
+            ? Math.round((perf.renewedClients / (perf.renewedClients + perf.failedRenewals)) * 100 * 10) / 10
+            : 0
+        }))
         .sort((a: any, b: any) => b.renewalRevenue - a.renewalRevenue)
 
-      // 부서별 통계 계산
-      const deptPerformances = latestMonth.performances.reduce((acc, perf) => {
-        if (!acc[perf.department]) {
-          acc[perf.department] = {
+      // 부서별 통계
+      const deptMap = new Map<string, any>()
+      targetMonthStats.performances.forEach((perf: any) => {
+        if (!perf.department) return
+
+        if (!deptMap.has(perf.department)) {
+          deptMap.set(perf.department, {
             department: perf.department,
             totalAEs: new Set(),
             totalClients: 0,
-            totalExpiring: 0,
             renewedClients: 0,
             failedRenewals: 0,
             renewalRevenue: 0
-          }
+          })
         }
-        acc[perf.department].totalAEs.add(perf.aeName)
-        acc[perf.department].totalClients += perf.totalClients
-        acc[perf.department].totalExpiring += perf.expiringClients
-        acc[perf.department].renewedClients += perf.renewedClients
-        acc[perf.department].failedRenewals += perf.failedRenewals
-        acc[perf.department].renewalRevenue += perf.renewalRevenue
-        return acc
-      }, {} as { [key: string]: any })
+        const dept = deptMap.get(perf.department)!
+        dept.totalAEs.add(perf.aeName)
+        dept.totalClients += perf.totalClients
+        dept.renewedClients += perf.renewedClients
+        dept.failedRenewals += perf.failedRenewals
+        dept.renewalRevenue += perf.renewalRevenue
+      })
 
-      departmentStats = Object.values(deptPerformances)
-        .map((dept: any) => ({
+      departmentStats = Array.from(deptMap.values())
+        .map(dept => ({
           department: dept.department,
           totalAEs: dept.totalAEs.size,
           totalClients: dept.totalClients,
-          renewalRate: dept.totalExpiring > 0 ? Math.round((dept.renewedClients / dept.totalExpiring) * 100 * 10) / 10 : 0,
+          renewalRate: (dept.renewedClients + dept.failedRenewals) > 0
+            ? Math.round((dept.renewedClients / (dept.renewedClients + dept.failedRenewals)) * 100 * 10) / 10
+            : 0,
           renewedClients: dept.renewedClients,
           failedRenewals: dept.failedRenewals,
           renewalRevenue: dept.renewalRevenue
@@ -137,7 +229,9 @@ export async function GET(request: NextRequest) {
       departmentStats,
       totalStats: {
         totalMonths: monthlyStats.length,
-        averageRenewalRate: monthlyStats.reduce((sum, m) => sum + m.renewalRate, 0) / (monthlyStats.length || 1)
+        averageRenewalRate: monthlyStats.length > 0
+          ? Math.round((monthlyStats.reduce((sum, m) => sum + m.renewalRate, 0) / monthlyStats.length) * 10) / 10
+          : 0
       }
     })
   } catch (error) {

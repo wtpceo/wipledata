@@ -43,7 +43,39 @@ export async function GET(request: NextRequest) {
     let filteredData = salesData
 
     if (month) {
-      filteredData = filteredData.filter(s => s.inputYearMonth === month)
+      filteredData = filteredData.filter(s => {
+        // 영업부는 S열(inputYearMonth) 사용
+        if (s.department === '영업부') {
+          return s.inputYearMonth === month
+        } else {
+          // 내근직(영업부 제외)은 A열(timestamp) 사용
+          if (!s.timestamp) return false
+
+          try {
+            let saleDate: Date | null = null
+
+            if (s.timestamp.includes('/')) {
+              const parts = s.timestamp.split('/')
+              if (parts.length === 3) {
+                const [m, d, y] = parts
+                saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+              }
+            } else if (s.timestamp.includes('.')) {
+              saleDate = new Date(s.timestamp.replace(/\./g, '-'))
+            } else if (s.timestamp.includes('-')) {
+              saleDate = new Date(s.timestamp)
+            }
+
+            if (saleDate && !isNaN(saleDate.getTime())) {
+              const saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
+              return saleMonth === month
+            }
+          } catch (error) {
+            console.error('Timestamp parsing error:', s.timestamp, error)
+          }
+          return false
+        }
+      })
     }
 
     if (department) {

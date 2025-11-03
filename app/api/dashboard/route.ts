@@ -52,56 +52,111 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 현재 월 데이터 필터링 (S열 기준)
+    // 현재 월 데이터 필터링
+    // 영업부: S열(입력 월) 기준, 내근직: A열(타임스탬프) 기준
     const currentMonthSales = sales.filter(sale => {
-      const inputMonth = sale.inputMonth
-      if (!inputMonth) return false
+      // 영업부는 S열(입력 월) 사용
+      if (sale.department === '영업부') {
+        const inputMonth = sale.inputMonth
+        if (!inputMonth) return false
 
-      // 입력 월 형식 파싱
-      if (inputMonth.includes('-')) {
-        // "2024-10" 형식
-        return inputMonth === month
-      } else if (inputMonth.includes('.')) {
-        // "2024.10" 형식
-        const formatted = inputMonth.replace('.', '-')
-        return formatted === month
-      } else if (inputMonth.length <= 2) {
-        // "10" 형식 (월만 있는 경우)
-        const monthNum = parseInt(inputMonth)
-        return monthNum === currentMonth
-      } else if (inputMonth.length === 6) {
-        // "202410" 형식
-        const year = inputMonth.substring(0, 4)
-        const mon = inputMonth.substring(4, 6)
-        return `${year}-${mon}` === month
+        // 입력 월 형식 파싱
+        if (inputMonth.includes('-')) {
+          return inputMonth === month
+        } else if (inputMonth.includes('.')) {
+          const formatted = inputMonth.replace('.', '-')
+          return formatted === month
+        } else if (inputMonth.length <= 2) {
+          const monthNum = parseInt(inputMonth)
+          return monthNum === currentMonth
+        } else if (inputMonth.length === 6) {
+          const year = inputMonth.substring(0, 4)
+          const mon = inputMonth.substring(4, 6)
+          return `${year}-${mon}` === month
+        }
+        return false
+      } else {
+        // 내근직(영업부 제외)은 A열(타임스탬프) 사용
+        if (!sale.date) return false
+
+        const timestamp = sale.date
+        try {
+          let saleDate: Date | null = null
+
+          if (timestamp.includes('/')) {
+            const parts = timestamp.split('/')
+            if (parts.length === 3) {
+              const [m, d, y] = parts
+              saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+            }
+          } else if (timestamp.includes('.')) {
+            saleDate = new Date(timestamp.replace(/\./g, '-'))
+          } else if (timestamp.includes('-')) {
+            saleDate = new Date(timestamp)
+          }
+
+          if (saleDate && !isNaN(saleDate.getTime())) {
+            const saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
+            return saleMonth === month
+          }
+        } catch (error) {
+          console.error('Timestamp parsing error:', timestamp, error)
+        }
+        return false
       }
-      return false
     })
 
-    // 이전 월 데이터 필터링 (S열 기준)
+    // 이전 월 데이터 필터링
+    // 영업부: S열(입력 월) 기준, 내근직: A열(타임스탬프) 기준
     const prevMonthSales = sales.filter(sale => {
-      const inputMonth = sale.inputMonth
-      if (!inputMonth) return false
+      // 영업부는 S열(입력 월) 사용
+      if (sale.department === '영업부') {
+        const inputMonth = sale.inputMonth
+        if (!inputMonth) return false
 
-      // 입력 월 형식 파싱
-      if (inputMonth.includes('-')) {
-        // "2024-10" 형식
-        return inputMonth === prevMonth
-      } else if (inputMonth.includes('.')) {
-        // "2024.10" 형식
-        const formatted = inputMonth.replace('.', '-')
-        return formatted === prevMonth
-      } else if (inputMonth.length <= 2) {
-        // "10" 형식 (월만 있는 경우)
-        const monthNum = parseInt(inputMonth)
-        return monthNum === prevMonthNum
-      } else if (inputMonth.length === 6) {
-        // "202410" 형식
-        const year = inputMonth.substring(0, 4)
-        const mon = inputMonth.substring(4, 6)
-        return `${year}-${mon.padStart(2, '0')}` === prevMonth
+        if (inputMonth.includes('-')) {
+          return inputMonth === prevMonth
+        } else if (inputMonth.includes('.')) {
+          const formatted = inputMonth.replace('.', '-')
+          return formatted === prevMonth
+        } else if (inputMonth.length <= 2) {
+          const monthNum = parseInt(inputMonth)
+          return monthNum === prevMonthNum
+        } else if (inputMonth.length === 6) {
+          const year = inputMonth.substring(0, 4)
+          const mon = inputMonth.substring(4, 6)
+          return `${year}-${mon.padStart(2, '0')}` === prevMonth
+        }
+        return false
+      } else {
+        // 내근직(영업부 제외)은 A열(타임스탬프) 사용
+        if (!sale.date) return false
+
+        const timestamp = sale.date
+        try {
+          let saleDate: Date | null = null
+
+          if (timestamp.includes('/')) {
+            const parts = timestamp.split('/')
+            if (parts.length === 3) {
+              const [m, d, y] = parts
+              saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+            }
+          } else if (timestamp.includes('.')) {
+            saleDate = new Date(timestamp.replace(/\./g, '-'))
+          } else if (timestamp.includes('-')) {
+            saleDate = new Date(timestamp)
+          }
+
+          if (saleDate && !isNaN(saleDate.getTime())) {
+            const saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
+            return saleMonth === prevMonth
+          }
+        } catch (error) {
+          console.error('Timestamp parsing error:', timestamp, error)
+        }
+        return false
       }
-      return false
     })
 
     // 신규/연장/추천 구분
@@ -246,33 +301,33 @@ export async function GET(request: NextRequest) {
       return false
     }).reduce((sum, s) => sum + s.totalAmount, 0)
 
-    // 이번 주 내근직 매출 (O열의 계약 날짜 기준)
+    // 이번 주 내근직 매출 (A열의 타임스탬프 기준)
     // 영업부를 제외한 모든 부서를 내근직으로 간주
     const weekSalesInternal = sales.filter(sale => {
-      if (!sale.rawRow || !sale.rawRow[14] || sale.department === '영업부') return false
+      if (!sale.date || sale.department === '영업부') return false
 
-      const contractDate = sale.rawRow[14] // O열: 계약 날짜
+      const timestamp = sale.date // A열: 타임스탬프
       let saleDate: Date | null = null
 
       try {
-        // 날짜 형식 파싱 (YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD 등)
-        if (contractDate.includes('/')) {
-          const parts = contractDate.split('/')
+        // 타임스탬프 형식 파싱 (YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD 등)
+        if (timestamp.includes('/')) {
+          const parts = timestamp.split('/')
           if (parts.length === 3) {
             const [m, d, y] = parts
             saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
           }
-        } else if (contractDate.includes('.')) {
-          saleDate = new Date(contractDate.replace(/\./g, '-'))
-        } else if (contractDate.includes('-')) {
-          saleDate = new Date(contractDate)
+        } else if (timestamp.includes('.')) {
+          saleDate = new Date(timestamp.replace(/\./g, '-'))
+        } else if (timestamp.includes('-')) {
+          saleDate = new Date(timestamp)
         }
 
         if (saleDate && !isNaN(saleDate.getTime())) {
           return saleDate >= weekStart && saleDate <= weekEnd
         }
       } catch (error) {
-        console.error('Date parsing error:', contractDate, error)
+        console.error('Timestamp parsing error:', timestamp, error)
       }
 
       return false
