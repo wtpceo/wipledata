@@ -48,6 +48,14 @@ const navigationConfig = [
     roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '매출 입력', href: '/sales/new', icon: DollarSign },
+      { name: '제안서 요청', href: '/proposal-request', icon: FileText },
+    ]
+  },
+  {
+    title: '제안서 관리',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
+    items: [
+      { name: '제안서 목록', href: '/proposals', icon: FileText },
     ]
   },
   {
