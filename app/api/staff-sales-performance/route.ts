@@ -164,12 +164,20 @@ export async function GET(request: NextRequest) {
           count: 0,
           totalAmount: 0,
           netProfit: 0,
-          percentage: 0
+          percentage: 0,
+          clients: []
         }
       }
       acc[sale.salesType].count += 1
       acc[sale.salesType].totalAmount += sale.totalAmount
       acc[sale.salesType].netProfit += sale.netProfit
+      // 광고주 정보 추가 (중복 제거)
+      const clientInfo = {
+        name: sale.clientName,
+        amount: sale.totalAmount,
+        staff: sale.staff
+      }
+      acc[sale.salesType].clients.push(clientInfo)
       return acc
     }, {} as { [key: string]: any })
 

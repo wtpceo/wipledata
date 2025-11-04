@@ -36,6 +36,9 @@ export async function GET(request: NextRequest) {
     const amountIndex = headers.findIndex((h: string) =>
       h?.includes('총 계약금액') || h?.includes('Total_Amount') || h?.includes('계약금액')
     )
+    const outsourcingCostIndex = headers.findIndex((h: string) =>
+      h?.includes('확정 외주비') || h?.includes('외주비') || h?.toLowerCase().includes('outsourcing')
+    )
     const clientIndex = headers.findIndex((h: string) =>
       h?.includes('광고주') || h?.includes('업체') || h?.toLowerCase().includes('client')
     )
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest) {
     )
 
     console.log('Column indices - Dept:', departmentIndex, 'InputPerson:', inputPersonIndex,
-                'Amount:', amountIndex, 'Client:', clientIndex, 'Date:', dateIndex)
+                'Amount:', amountIndex, 'OutsourcingCost:', outsourcingCostIndex, 'Client:', clientIndex, 'Date:', dateIndex)
 
     // 모든 부서 목록 확인 (디버깅용)
     const allDepartments = new Set()
@@ -81,8 +84,16 @@ export async function GET(request: NextRequest) {
     salesDeptData.forEach(row => {
       const salesPerson = row[inputPersonIndex]?.trim()
       const salesType = row[salesTypeIndex]?.trim() || '기타'
-      const amountStr = row[amountIndex]?.toString().replace(/[^0-9.-]/g, '') || '0'
-      const amount = parseFloat(amountStr) || 0
+
+      // 총계약금액과 외주비 파싱
+      const contractAmountStr = row[amountIndex]?.toString().replace(/[^0-9.-]/g, '') || '0'
+      const contractAmount = parseFloat(contractAmountStr) || 0
+      const outsourcingCostStr = row[outsourcingCostIndex]?.toString().replace(/[^0-9.-]/g, '') || '0'
+      const outsourcingCost = parseFloat(outsourcingCostStr) || 0
+
+      // 영업부는 총계약금액 - 외주비
+      const amount = contractAmount - outsourcingCost
+
       const client = row[clientIndex]?.trim() || ''
       const dateStr = row[dateIndex]?.trim() || ''
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 
-const INACTIVITY_TIMEOUT = 60 * 60 * 1000 // 1시간 (밀리초)
+const INACTIVITY_TIMEOUT = 8 * 60 * 60 * 1000 // 8시간 (밀리초)
 
 export function AutoLogout() {
   const { data: session } = useSession()

@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DollarSign, TrendingUp, Users, FileText, Award } from 'lucide-react'
+import { DollarSign, TrendingUp, Users, FileText, Award, ChevronDown, ChevronRight } from 'lucide-react'
+
+interface ClientInfo {
+  name: string
+  amount: number
+  staff: string
+}
 
 interface SalesTypeBreakdown {
   type: string
@@ -27,6 +33,7 @@ interface SalesTypeStats {
   totalAmount: number
   netProfit: number
   percentage: number
+  clients: ClientInfo[]
 }
 
 interface PerformanceData {
@@ -45,6 +52,7 @@ export default function StaffPerformancePage() {
   const [data, setData] = useState<PerformanceData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState('2025-11')
+  const [expandedTypes, setExpandedTypes] = useState<string[]>([])
 
   useEffect(() => {
     fetchData()
@@ -72,6 +80,14 @@ export default function StaffPerformancePage() {
       currency: 'KRW',
       maximumFractionDigits: 0
     }).format(amount)
+  }
+
+  const toggleSalesType = (type: string) => {
+    setExpandedTypes(prev =>
+      prev.includes(type)
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    )
   }
 
   // 매출 유형별 색상 매핑
@@ -168,27 +184,61 @@ export default function StaffPerformancePage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3 md:space-y-4">
-            {data.salesTypeStats.map((stat) => (
-              <div key={stat.type} className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1 md:gap-2 min-w-0 flex-1">
-                    <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0 ${salesTypeColors[stat.type] || 'bg-gray-500'}`} />
-                    <span className="font-medium text-sm md:text-base truncate">{stat.type}</span>
-                    <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0">({stat.count}건)</span>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="font-bold text-xs md:text-base">{formatCurrency(stat.totalAmount)}</div>
-                    <div className="text-xs md:text-sm text-muted-foreground">{stat.percentage}%</div>
-                  </div>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+            {data.salesTypeStats.map((stat) => {
+              const isExpanded = expandedTypes.includes(stat.type)
+              return (
+                <div key={stat.type} className="space-y-2">
                   <div
-                    className={`h-2 rounded-full ${salesTypeColors[stat.type] || 'bg-gray-500'}`}
-                    style={{ width: `${stat.percentage}%` }}
-                  />
+                    className="flex items-center justify-between gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-md transition-colors"
+                    onClick={() => toggleSalesType(stat.type)}
+                  >
+                    <div className="flex items-center gap-1 md:gap-2 min-w-0 flex-1">
+                      {isExpanded ? (
+                        <ChevronDown className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0 text-muted-foreground" />
+                      )}
+                      <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0 ${salesTypeColors[stat.type] || 'bg-gray-500'}`} />
+                      <span className="font-medium text-sm md:text-base truncate">{stat.type}</span>
+                      <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0">({stat.count}건)</span>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-bold text-xs md:text-base">{formatCurrency(stat.totalAmount)}</div>
+                      <div className="text-xs md:text-sm text-muted-foreground">{stat.percentage}%</div>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${salesTypeColors[stat.type] || 'bg-gray-500'}`}
+                      style={{ width: `${stat.percentage}%` }}
+                    />
+                  </div>
+
+                  {/* 광고주 상세 정보 */}
+                  {isExpanded && stat.clients && stat.clients.length > 0 && (
+                    <div className="mt-3 pl-6 md:pl-8 space-y-2">
+                      <div className="text-xs md:text-sm font-medium text-muted-foreground mb-2">
+                        광고주 상세
+                      </div>
+                      <div className="space-y-1.5">
+                        {stat.clients.map((client, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between text-xs md:text-sm py-1.5 px-2 bg-gray-50 rounded"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="font-medium truncate">{client.name}</span>
+                              <span className="text-muted-foreground flex-shrink-0">({client.staff})</span>
+                            </div>
+                            <span className="font-semibold flex-shrink-0 ml-2">{formatCurrency(client.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </CardContent>
       </Card>
