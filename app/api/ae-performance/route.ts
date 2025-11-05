@@ -42,9 +42,8 @@ export async function GET(request: NextRequest) {
     // Clients 탭에서 전체 광고주 및 연장 실패 데이터 읽기
     const clientsData = await readFromSheet('clients!A:F')
 
-    // 원본데이터에서 연장 매출 파싱 (D열 = '연장')
-    const renewalSales = rawData
-      .filter(row => row[3] === '연장') // D열: 매출 유형
+    // 원본데이터에서 모든 매출 파싱 (모든 매출 유형 포함)
+    const allSales = rawData
       .map(row => {
         const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0 // H열: 총계약금액
         const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0 // K열: 확정 외주비
@@ -60,51 +59,103 @@ export async function GET(request: NextRequest) {
           salesType: row[3] || '', // D열: 매출 유형
           clientName: row[4] || '', // E열: 광고주명
           totalAmount: actualAmount,
+          inputYearMonth: row[18] || '', // S열: 입력년월 (영업부 필터링용)
         }
       })
 
     console.log('=== AE Performance Debug ===')
-    console.log('Total renewal sales found:', renewalSales.length)
-    if (renewalSales.length > 0) {
-      console.log('Sample renewal (first 3):')
-      renewalSales.slice(0, 3).forEach((sale, idx) => {
-        console.log(`  ${idx + 1}. AE: ${sale.aeName}, Timestamp: ${sale.timestamp}, Amount: ${sale.totalAmount}`)
+    console.log('Total sales found:', allSales.length)
+
+    // 최호천의 모든 데이터 찾기
+    const choiSales = allSales.filter(s => s.aeName.includes('최호천') || s.aeName.includes('호천'))
+    console.log('최호천 total sales:', choiSales.length)
+    choiSales.forEach((sale, idx) => {
+      console.log(`  최호천 ${idx + 1}: Dept=${sale.department}, Type=${sale.salesType}, Amount=${sale.totalAmount}, Timestamp=${sale.timestamp}, InputMonth=${sale.inputYearMonth}`)
+    })
+
+    if (allSales.length > 0) {
+      console.log('Sample sales (first 3):')
+      allSales.slice(0, 3).forEach((sale, idx) => {
+        console.log(`  ${idx + 1}. AE: ${sale.aeName}, Type: ${sale.salesType}, Timestamp: ${sale.timestamp}, Amount: ${sale.totalAmount}`)
       })
     }
 
-    // 원본데이터에서 연장 성공을 월별로 그룹화
-    const renewalsByMonth = new Map<string, any[]>()
+    // 원본데이터에서 매출을 월별로 그룹화
+    const salesByMonth = new Map<string, any[]>()
     let parsedCount = 0
     let failedCount = 0
 
-    renewalSales.forEach(sale => {
-      if (!sale.timestamp) {
-        failedCount++
-        return
-      }
+    allSales.forEach(sale => {
+      let saleMonth: string | null = null
+      const isChoi = sale.aeName.includes('최호천') || sale.aeName.includes('호천')
 
-      const saleDate = parseDate(sale.timestamp)
-      if (!saleDate || isNaN(saleDate.getTime())) {
-        console.log('Failed to parse timestamp:', sale.timestamp)
-        failedCount++
-        return
+      // 영업부는 S열(inputYearMonth) 사용
+      if (sale.department === '영업부') {
+        if (!sale.inputYearMonth) {
+          if (isChoi) console.log('❌ 최호천: inputYearMonth 없음')
+          failedCount++
+          return
+        }
+
+        // 입력년월 형식 파싱 (YYYY-MM, YYYY.MM, MM 등)
+        const inputMonth = sale.inputYearMonth
+        if (inputMonth.includes('-')) {
+          saleMonth = inputMonth // 이미 YYYY-MM 형식
+        } else if (inputMonth.includes('.')) {
+          saleMonth = inputMonth.replace('.', '-') // YYYY.MM → YYYY-MM
+        } else if (inputMonth.length <= 2) {
+          // MM 형식인 경우 현재 연도 사용
+          const currentYear = new Date().getFullYear()
+          saleMonth = `${currentYear}-${inputMonth.padStart(2, '0')}`
+        } else if (inputMonth.length === 6) {
+          // YYYYMM 형식
+          const year = inputMonth.substring(0, 4)
+          const mon = inputMonth.substring(4, 6)
+          saleMonth = `${year}-${mon}`
+        }
+
+        if (!saleMonth) {
+          if (isChoi) console.log('❌ 최호천: inputYearMonth 파싱 실패:', inputMonth)
+          console.log('Failed to parse inputYearMonth:', inputMonth)
+          failedCount++
+          return
+        }
+
+        if (isChoi) console.log(`✅ 최호천: 영업부 - InputMonth=${inputMonth} → ${saleMonth}`)
+      } else {
+        // 내근직은 A열(timestamp) 사용
+        if (!sale.timestamp) {
+          if (isChoi) console.log('❌ 최호천: timestamp 없음')
+          failedCount++
+          return
+        }
+
+        const saleDate = parseDate(sale.timestamp)
+        if (!saleDate || isNaN(saleDate.getTime())) {
+          if (isChoi) console.log('❌ 최호천: timestamp 파싱 실패:', sale.timestamp)
+          console.log('Failed to parse timestamp:', sale.timestamp)
+          failedCount++
+          return
+        }
+
+        saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
+        if (isChoi) console.log(`✅ 최호천: 내근직 - Timestamp=${sale.timestamp} → ${saleMonth}`)
       }
 
       parsedCount++
-      const saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
 
-      if (!renewalsByMonth.has(saleMonth)) {
-        renewalsByMonth.set(saleMonth, [])
+      if (!salesByMonth.has(saleMonth)) {
+        salesByMonth.set(saleMonth, [])
       }
-      renewalsByMonth.get(saleMonth)!.push(sale)
+      salesByMonth.get(saleMonth)!.push(sale)
     })
 
     console.log('Timestamp parsing results:')
     console.log('  Successfully parsed:', parsedCount)
     console.log('  Failed to parse:', failedCount)
-    console.log('  Months with renewals:', Array.from(renewalsByMonth.keys()).sort())
-    renewalsByMonth.forEach((sales, month) => {
-      console.log(`  ${month}: ${sales.length} renewals`)
+    console.log('  Months with sales:', Array.from(salesByMonth.keys()).sort())
+    salesByMonth.forEach((sales, month) => {
+      console.log(`  ${month}: ${sales.length} sales`)
     })
 
     // Clients 탭에서 전체 광고주와 연장 실패 파싱
@@ -135,15 +186,15 @@ export async function GET(request: NextRequest) {
       }))
 
     // 월별 통계 생성
-    const monthlyStats = Array.from(renewalsByMonth.keys())
+    const monthlyStats = Array.from(salesByMonth.keys())
       .sort((a, b) => b.localeCompare(a)) // 최신 월부터
       .map(month => {
-        const monthRenewals = renewalsByMonth.get(month) || []
+        const monthSales = salesByMonth.get(month) || []
 
         // 해당 월의 AE별 실적
         const aeMonthPerformances = new Map<string, any>()
 
-        monthRenewals.forEach(sale => {
+        monthSales.forEach(sale => {
           if (!aeMonthPerformances.has(sale.aeName)) {
             const totalClients = aeTotalClientsMap.get(sale.aeName)?.size || 0
             aeMonthPerformances.set(sale.aeName, {

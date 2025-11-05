@@ -72,26 +72,26 @@ export async function GET(request: NextRequest) {
     // 첫 행은 헤더
     const [headers, ...dataRows] = rows
 
-    // 원본데이터에서 연장 실적 읽기 (타임스탬프 기반)
-    const rawData = await readFromSheet('원본데이터!A2:K')
-    const renewalSales = rawData
-      .filter(row => row[3] === '연장') // D열: 매출 유형
-      .map(row => {
-        const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0 // H열: 총계약금액
-        const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0 // K열: 확정 외주비
-        const department = row[1] || '' // B열: 부서
+    // 원본데이터에서 모든 매출 실적 읽기 (모든 매출 유형 포함)
+    const rawData = await readFromSheet('원본데이터!A2:T')
+    const allSales = rawData.map(row => {
+      const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0 // H열: 총계약금액
+      const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0 // K열: 확정 외주비
+      const department = row[1] || '' // B열: 부서
 
-        // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
-        const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+      // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
+      const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
 
-        return {
-          timestamp: row[0] || '', // A열: 타임스탬프
-          department: department,
-          aeName: normalizeStaffName(row[2] || ''), // C열: 담당자
-          clientName: row[4] || '', // E열: 광고주명
-          totalAmount: actualAmount,
-        }
-      })
+      return {
+        timestamp: row[0] || '', // A열: 타임스탬프
+        department: department,
+        aeName: normalizeStaffName(row[2] || ''), // C열: 담당자
+        salesType: row[3] || '', // D열: 매출 유형 (모든 유형 포함)
+        clientName: row[4] || '', // E열: 광고주명
+        totalAmount: actualAmount,
+        inputYearMonth: row[18] || '', // S열: 입력년월 (영업부 필터링용)
+      }
+    })
 
     // 타겟 월 설정 (파라미터가 없으면 현재 월)
     let targetMonth: number
@@ -224,58 +224,88 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    // 해당 월의 연장 성공 건수 계산 (원본데이터 기반, 타임스탬프 사용)
-    const monthlyRenewals = renewalSales.filter(sale => {
-      if (!sale.timestamp) return false
-
+    // 해당 월의 매출 건수 계산 (영업부는 S열, 내근직은 A열 타임스탬프 사용)
+    const monthlySales = allSales.filter(sale => {
       try {
-        let saleDate: Date | null = null
+        // 영업부는 S열(inputYearMonth) 사용
+        if (sale.department === '영업부') {
+          if (!sale.inputYearMonth) return false
 
-        // ISO 형식 (2024-11-03T12:34:56.789Z)
-        if (sale.timestamp.includes('T')) {
-          saleDate = new Date(sale.timestamp)
-        }
-        // MM/DD/YYYY 형식
-        else if (sale.timestamp.includes('/')) {
-          const parts = sale.timestamp.split('/')
-          if (parts.length === 3) {
-            const [m, d, y] = parts
-            saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+          const inputMonth = sale.inputYearMonth
+          let saleMonth: string | null = null
+
+          // 입력년월 형식 파싱 (YYYY-MM, YYYY.MM, MM 등)
+          if (inputMonth.includes('-')) {
+            saleMonth = inputMonth // 이미 YYYY-MM 형식
+          } else if (inputMonth.includes('.')) {
+            saleMonth = inputMonth.replace('.', '-') // YYYY.MM → YYYY-MM
+          } else if (inputMonth.length <= 2) {
+            // MM 형식인 경우 현재 연도 사용
+            const currentYear = new Date().getFullYear()
+            saleMonth = `${currentYear}-${inputMonth.padStart(2, '0')}`
+          } else if (inputMonth.length === 6) {
+            // YYYYMM 형식
+            const year = inputMonth.substring(0, 4)
+            const mon = inputMonth.substring(4, 6)
+            saleMonth = `${year}-${mon}`
           }
-        }
-        // YYYY.MM.DD 형식
-        else if (sale.timestamp.includes('.')) {
-          saleDate = new Date(sale.timestamp.replace(/\./g, '-'))
-        }
-        // YYYY-MM-DD 형식
-        else if (sale.timestamp.includes('-')) {
-          saleDate = new Date(sale.timestamp)
-        }
 
-        if (!saleDate || isNaN(saleDate.getTime())) return false
+          if (!saleMonth) return false
 
-        return saleDate.getMonth() === targetMonth && saleDate.getFullYear() === targetYear
+          return saleMonth === `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`
+        }
+        // 내근직은 A열(timestamp) 사용
+        else {
+          if (!sale.timestamp) return false
+
+          let saleDate: Date | null = null
+
+          // ISO 형식 (2024-11-03T12:34:56.789Z)
+          if (sale.timestamp.includes('T')) {
+            saleDate = new Date(sale.timestamp)
+          }
+          // MM/DD/YYYY 형식
+          else if (sale.timestamp.includes('/')) {
+            const parts = sale.timestamp.split('/')
+            if (parts.length === 3) {
+              const [m, d, y] = parts
+              saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+            }
+          }
+          // YYYY.MM.DD 형식
+          else if (sale.timestamp.includes('.')) {
+            saleDate = new Date(sale.timestamp.replace(/\./g, '-'))
+          }
+          // YYYY-MM-DD 형식
+          else if (sale.timestamp.includes('-')) {
+            saleDate = new Date(sale.timestamp)
+          }
+
+          if (!saleDate || isNaN(saleDate.getTime())) return false
+
+          return saleDate.getMonth() === targetMonth && saleDate.getFullYear() === targetYear
+        }
       } catch {
         return false
       }
     })
 
-    // AE별 연장 성공 건수 맵 생성
-    const aeRenewalMap = new Map<string, { count: number; amount: number }>()
-    monthlyRenewals.forEach(sale => {
-      if (!aeRenewalMap.has(sale.aeName)) {
-        aeRenewalMap.set(sale.aeName, { count: 0, amount: 0 })
+    // AE별 매출 건수 맵 생성 (모든 유형 포함)
+    const aeSalesMap = new Map<string, { count: number; amount: number }>()
+    monthlySales.forEach(sale => {
+      if (!aeSalesMap.has(sale.aeName)) {
+        aeSalesMap.set(sale.aeName, { count: 0, amount: 0 })
       }
-      const stats = aeRenewalMap.get(sale.aeName)!
+      const stats = aeSalesMap.get(sale.aeName)!
       stats.count += 1
       stats.amount += sale.totalAmount
     })
 
-    console.log('=== Renewal Stats Debug ===')
+    console.log('=== Sales Stats Debug ===')
     console.log('Target month:', `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`)
-    console.log('Total renewal sales in raw data:', renewalSales.length)
-    console.log('Renewals in target month:', monthlyRenewals.length)
-    console.log('AEs with renewals:', Array.from(aeRenewalMap.keys()))
+    console.log('Total sales in raw data:', allSales.length)
+    console.log('Sales in target month:', monthlySales.length)
+    console.log('AEs with sales:', Array.from(aeSalesMap.keys()))
 
     // AE별 통계 계산 - 모든 AE 포함 (종료 예정이 0개인 AE도 포함)
     const aeStats = Array.from(aeTotalClientsMap.keys()).map((aeName) => {
@@ -284,10 +314,10 @@ export async function GET(request: NextRequest) {
       const failedClients = clients.filter(c => c.status === 'failed').length
       const pendingClients = clients.filter(c => c.status === 'pending').length || clients.filter(c => c.status === 'waiting').length
 
-      // 원본데이터 기반 연장 성공 건수 및 매출
-      const renewalStats = aeRenewalMap.get(aeName) || { count: 0, amount: 0 }
-      const renewedClients = renewalStats.count
-      const totalRenewalAmount = renewalStats.amount
+      // 원본데이터 기반 매출 건수 및 총액 (모든 유형 포함)
+      const salesStats = aeSalesMap.get(aeName) || { count: 0, amount: 0 }
+      const salesCount = salesStats.count
+      const totalSalesAmount = salesStats.amount
 
       // 전체 광고주 수 (진행 중인 모든 광고주)
       const totalClients = aeTotalClientsMap.get(aeName)?.size || 0
@@ -296,11 +326,11 @@ export async function GET(request: NextRequest) {
         aeName,
         totalClients, // 전체 광고주 수
         expiringClients: expiringCount, // 종료 예정 광고주 수
-        renewedClients, // 원본데이터 기반 연장 성공
+        renewedClients: salesCount, // 원본데이터 기반 계약 건수 (모든 유형)
         failedClients,
         pendingClients,
-        totalRenewalAmount,
-        renewalRate: expiringCount > 0 ? Math.round((renewedClients / expiringCount) * 100) : 0
+        totalRenewalAmount: totalSalesAmount, // 총 매출액 (모든 유형)
+        renewalRate: expiringCount > 0 ? Math.round((salesCount / expiringCount) * 100) : 0
       }
     }).sort((a, b) => b.expiringClients - a.expiringClients)
 

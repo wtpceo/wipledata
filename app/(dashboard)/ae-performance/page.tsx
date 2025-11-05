@@ -107,7 +107,7 @@ export default function AEPerformanceDashboard() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">AE 실적 대시보드</h2>
           <p className="text-muted-foreground">
-            AE별 연장 실적과 성과를 분석합니다
+            AE별 매출 실적과 성과를 분석합니다
           </p>
         </div>
         <Button onClick={() => router.push('/ae-performance/new')}>
@@ -159,7 +159,7 @@ export default function AEPerformanceDashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">연장 매출</CardTitle>
+                <CardTitle className="text-sm font-medium">총 매출</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -167,22 +167,22 @@ export default function AEPerformanceDashboard() {
                   {formatCurrency(selectedMonthData.totalRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {selectedMonthData.totalRenewed}개 광고주 연장
+                  {selectedMonthData.totalRenewed}건의 계약
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">연장 성공</CardTitle>
+                <CardTitle className="text-sm font-medium">계약 건수</CardTitle>
                 <TrendingUp className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {selectedMonthData.totalRenewed}개
+                  {selectedMonthData.totalRenewed}건
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  총 {selectedMonthData.totalExpiring}개 중
+                  총 {selectedMonthData.totalExpiring}건 중
                 </p>
               </CardContent>
             </Card>
@@ -240,7 +240,7 @@ export default function AEPerformanceDashboard() {
                       <div className="text-right">
                         <p className="font-bold">{formatCurrency(ae.renewalRevenue)}</p>
                         <p className="text-xs text-muted-foreground">
-                          성공 {ae.renewedClients} / 실패 {ae.failedRenewals}
+                          계약 {ae.renewedClients}건 / 실패 {ae.failedRenewals}건
                         </p>
                       </div>
                     </div>
@@ -319,7 +319,7 @@ export default function AEPerformanceDashboard() {
                           <p className="text-2xl font-bold">
                             {formatCurrency(dept.renewalRevenue)}
                           </p>
-                          <p className="text-sm text-muted-foreground">연장 매출</p>
+                          <p className="text-sm text-muted-foreground">총 매출</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-4 gap-4 text-sm">
@@ -333,15 +333,15 @@ export default function AEPerformanceDashboard() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">연장 성공</p>
+                          <p className="text-muted-foreground">계약 건수</p>
                           <p className="font-semibold text-lg text-green-600">
-                            {dept.renewedClients}개
+                            {dept.renewedClients}건
                           </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">연장 실패</p>
                           <p className="font-semibold text-lg text-red-600">
-                            {dept.failedRenewals}개
+                            {dept.failedRenewals}건
                           </p>
                         </div>
                         <div>
@@ -381,10 +381,10 @@ export default function AEPerformanceDashboard() {
                       <th className="text-left p-2">AE</th>
                       <th className="text-center p-2">담당 광고주</th>
                       <th className="text-center p-2">종료 예정</th>
-                      <th className="text-center p-2">연장 성공</th>
+                      <th className="text-center p-2">계약 건수</th>
                       <th className="text-center p-2">연장 실패</th>
                       <th className="text-center p-2">연장률</th>
-                      <th className="text-right p-2">연장 매출</th>
+                      <th className="text-right p-2">총 매출</th>
                     </tr>
                   </thead>
                   <tbody>

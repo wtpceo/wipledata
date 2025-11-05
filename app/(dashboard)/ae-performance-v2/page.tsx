@@ -519,7 +519,7 @@ export default function AEPerformanceV2Page() {
                     <p className="text-xl font-bold">{stat.pendingClients}개</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">연장 성공</p>
+                    <p className="text-muted-foreground">계약 건수</p>
                     <p className="text-xl font-bold text-green-600">{stat.renewedClients}개</p>
                   </div>
                   <div>
@@ -527,7 +527,7 @@ export default function AEPerformanceV2Page() {
                     <p className="text-xl font-bold text-red-600">{stat.failedClients}개</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">연장 매출</p>
+                    <p className="text-muted-foreground">총 매출</p>
                     <p className="text-lg font-bold">{formatCurrency(stat.totalRenewalAmount)}</p>
                   </div>
                 </div>
