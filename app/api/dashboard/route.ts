@@ -187,11 +187,13 @@ export async function GET(request: NextRequest) {
     const renewals = currentMonthSales.filter(s => s.contractType === '연장').length
     const referrals = currentMonthSales.filter(s => s.contractType === '기존고객 소개').length
 
-    // 부서별 매출 집계
+    // 부서별 매출 집계 (영업부 / 내근직으로 통합)
     const departmentSales: { [key: string]: number } = {}
     currentMonthSales.forEach(sale => {
       if (sale.department) {
-        departmentSales[sale.department] = (departmentSales[sale.department] || 0) + sale.totalAmount
+        // 영업부는 그대로, 나머지는 모두 "내근직"으로 통합
+        const deptName = sale.department === '영업부' ? '영업부' : '내근직'
+        departmentSales[deptName] = (departmentSales[deptName] || 0) + sale.totalAmount
       }
     })
 
