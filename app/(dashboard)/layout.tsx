@@ -3,6 +3,7 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { WizWorksBanner } from '@/components/layout/wiz-works-banner'
+import { ReviewManagementBanner } from '@/components/layout/review-management-banner'
 import { useState } from 'react'
 import { Menu } from 'lucide-react'
 
@@ -19,6 +20,7 @@ export default function DashboardLayout({
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <WizWorksBanner />
+        <ReviewManagementBanner />
         <Header />
 
         {/* Mobile menu button */}
