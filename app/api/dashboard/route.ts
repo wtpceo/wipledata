@@ -254,6 +254,8 @@ export async function GET(request: NextRequest) {
     let week2GoalInternal = 0 // 내근직 2주차 목표
     let week3GoalSales = 0 // 영업부 3주차 목표
     let week3GoalInternal = 0 // 내근직 3주차 목표
+    let week4GoalSales = 0 // 영업부 4주차 목표
+    let week4GoalInternal = 0 // 내근직 4주차 목표
 
     try {
       // 월별 목표 읽기 (A2:B)
@@ -323,6 +325,25 @@ export async function GET(request: NextRequest) {
           const internalGoalStr = String(week3GoalsData[0][1]).replace(/[₩,]/g, '').replace(/원/g, '').trim()
           week3GoalInternal = parseFloat(internalGoalStr) || 0
           console.log('Week 3 Internal goal:', week3GoalInternal)
+        }
+      }
+
+      // 4주차 목표 읽기 (I6:J6)
+      const week4GoalsData = await readFromSheet('목표관리!I6:J6')
+      console.log('Week 4 goals data from sheet:', week4GoalsData)
+
+      if (week4GoalsData && week4GoalsData.length > 0 && week4GoalsData[0]) {
+        // I6 셀: 영업부 4주차 목표 (인덱스 0)
+        if (week4GoalsData[0][0]) {
+          const salesGoalStr = String(week4GoalsData[0][0]).replace(/[₩,]/g, '').replace(/원/g, '').trim()
+          week4GoalSales = parseFloat(salesGoalStr) || 0
+          console.log('Week 4 Sales goal:', week4GoalSales)
+        }
+        // J6 셀: 내근직 4주차 목표 (인덱스 1)
+        if (week4GoalsData[0][1]) {
+          const internalGoalStr = String(week4GoalsData[0][1]).replace(/[₩,]/g, '').replace(/원/g, '').trim()
+          week4GoalInternal = parseFloat(internalGoalStr) || 0
+          console.log('Week 4 Internal goal:', week4GoalInternal)
         }
       }
     } catch (error) {
@@ -556,6 +577,80 @@ export async function GET(request: NextRequest) {
       return false
     }).reduce((sum, s) => sum + s.totalAmount, 0)
 
+    // 4주차 매출 계산 (2025-11-24 ~ 2025-11-30)
+    const week4Start = new Date('2025-11-24T00:00:00')
+    const week4End = new Date('2025-11-30T23:59:59')
+
+    // 4주차 영업부 매출 (O열의 계약 날짜 기준)
+    const week4SalesSales = sales.filter(sale => {
+      if (!sale.rawRow || !sale.rawRow[14] || sale.department !== '영업부') return false
+
+      const contractDate = sale.rawRow[14] // O열: 계약 날짜
+      let saleDate: Date | null = null
+
+      try {
+        // 날짜 형식 파싱 (YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD 등)
+        if (contractDate.includes('/')) {
+          const parts = contractDate.split('/')
+          if (parts.length === 3) {
+            const [m, d, y] = parts
+            saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+          }
+        } else if (contractDate.includes('.')) {
+          saleDate = new Date(contractDate.replace(/\./g, '-'))
+        } else if (contractDate.includes('-')) {
+          saleDate = new Date(contractDate)
+        }
+
+        if (saleDate && !isNaN(saleDate.getTime())) {
+          return saleDate >= week4Start && saleDate <= week4End
+        }
+      } catch (error) {
+        console.error('Date parsing error:', contractDate, error)
+      }
+
+      return false
+    }).reduce((sum, s) => sum + s.totalAmount, 0)
+
+    // 4주차 내근직 매출 (A열의 타임스탬프 기준)
+    const week4SalesInternal = sales.filter(sale => {
+      if (!sale.date || sale.department === '영업부') return false
+
+      const timestamp = sale.date // A열: 타임스탬프
+      let saleDate: Date | null = null
+
+      try {
+        // ISO 형식 (2024-11-03T12:34:56.789Z)
+        if (timestamp.includes('T')) {
+          saleDate = new Date(timestamp)
+        }
+        // MM/DD/YYYY 형식
+        else if (timestamp.includes('/')) {
+          const parts = timestamp.split('/')
+          if (parts.length === 3) {
+            const [m, d, y] = parts
+            saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+          }
+        }
+        // YYYY.MM.DD 형식
+        else if (timestamp.includes('.')) {
+          saleDate = new Date(timestamp.replace(/\./g, '-'))
+        }
+        // YYYY-MM-DD 형식
+        else if (timestamp.includes('-')) {
+          saleDate = new Date(timestamp)
+        }
+
+        if (saleDate && !isNaN(saleDate.getTime())) {
+          return saleDate >= week4Start && saleDate <= week4End
+        }
+      } catch (error) {
+        console.error('Timestamp parsing error:', timestamp, error)
+      }
+
+      return false
+    }).reduce((sum, s) => sum + s.totalAmount, 0)
+
     // 주간 목표 달성률
     const week1AchievementSales = week1GoalSales > 0 ? (week1SalesSales / week1GoalSales * 100) : 0
     const week1AchievementInternal = week1GoalInternal > 0 ? (week1SalesInternal / week1GoalInternal * 100) : 0
@@ -563,6 +658,8 @@ export async function GET(request: NextRequest) {
     const week2AchievementInternal = week2GoalInternal > 0 ? (week2SalesInternal / week2GoalInternal * 100) : 0
     const week3AchievementSales = week3GoalSales > 0 ? (week3SalesSales / week3GoalSales * 100) : 0
     const week3AchievementInternal = week3GoalInternal > 0 ? (week3SalesInternal / week3GoalInternal * 100) : 0
+    const week4AchievementSales = week4GoalSales > 0 ? (week4SalesSales / week4GoalSales * 100) : 0
+    const week4AchievementInternal = week4GoalInternal > 0 ? (week4SalesInternal / week4GoalInternal * 100) : 0
 
     return NextResponse.json({
       overview: {
@@ -611,6 +708,18 @@ export async function GET(request: NextRequest) {
           goal: week3GoalInternal,
           current: week3SalesInternal,
           achievementRate: Math.round(week3AchievementInternal * 10) / 10
+        }
+      },
+      week4Goals: {
+        sales: {
+          goal: week4GoalSales,
+          current: week4SalesSales,
+          achievementRate: Math.round(week4AchievementSales * 10) / 10
+        },
+        internal: {
+          goal: week4GoalInternal,
+          current: week4SalesInternal,
+          achievementRate: Math.round(week4AchievementInternal * 10) / 10
         }
       },
       departmentSales: Object.entries(departmentSales).map(([name, amount]) => ({
