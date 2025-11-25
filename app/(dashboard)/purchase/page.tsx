@@ -4,45 +4,41 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Calendar, TrendingUp, DollarSign, Users, Loader2, Filter } from 'lucide-react'
+import { TrendingDown, Loader2, Filter, CreditCard, Building2, FileText } from 'lucide-react'
 
-interface SalesRecord {
+interface PurchaseRecord {
   id: string
   date: string
-  type: string
-  category: string
-  clientName: string
-  grossAmount: number
-  vat: number
-  cardFee: number
-  netAmount: number
+  accountType: string
+  description: string
+  amount: number
   paymentMethod: string
-  salesPerson: string
+  department: string
   note: string
 }
 
-interface CategoryStats {
-  [key: string]: { count: number; grossAmount: number; netAmount: number }
+interface AccountTypeStats {
+  [key: string]: { count: number; amount: number }
 }
 
-interface SalesPersonStats {
-  [key: string]: { count: number; grossAmount: number; netAmount: number }
+interface DepartmentStats {
+  [key: string]: { count: number; amount: number }
 }
 
-export default function SalesPage() {
-  const [sales, setSales] = useState<SalesRecord[]>([])
+interface PaymentMethodStats {
+  [key: string]: { count: number; amount: number }
+}
+
+export default function PurchasePage() {
+  const [purchases, setPurchases] = useState<PurchaseRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [categoryStats, setCategoryStats] = useState<CategoryStats>({})
-  const [salesPersonStats, setSalesPersonStats] = useState<SalesPersonStats>({})
-  const [summary, setSummary] = useState({
-    totalGrossAmount: 0,
-    totalNetAmount: 0,
-    totalVat: 0,
-    totalCardFee: 0,
-  })
+  const [accountTypeStats, setAccountTypeStats] = useState<AccountTypeStats>({})
+  const [departmentStats, setDepartmentStats] = useState<DepartmentStats>({})
+  const [paymentMethodStats, setPaymentMethodStats] = useState<PaymentMethodStats>({})
+  const [totalAmount, setTotalAmount] = useState(0)
 
   // 이번 달 기본값 설정
   useEffect(() => {
@@ -56,25 +52,26 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (startDate && endDate) {
-      fetchSales()
+      fetchPurchases()
     }
   }, [startDate, endDate])
 
-  const fetchSales = async () => {
+  const fetchPurchases = async () => {
     setLoading(true)
     setError(null)
     try {
       const response = await fetch(
-        `/api/management-sales?startDate=${startDate}&endDate=${endDate}`
+        `/api/management-purchase?startDate=${startDate}&endDate=${endDate}`
       )
       if (!response.ok) {
         throw new Error('데이터를 불러오는데 실패했습니다.')
       }
       const data = await response.json()
-      setSales(data.data || [])
-      setSummary(data.summary || { totalGrossAmount: 0, totalNetAmount: 0, totalVat: 0, totalCardFee: 0 })
-      setCategoryStats(data.categoryStats || {})
-      setSalesPersonStats(data.salesPersonStats || {})
+      setPurchases(data.data || [])
+      setTotalAmount(data.summary?.totalAmount || 0)
+      setAccountTypeStats(data.accountTypeStats || {})
+      setDepartmentStats(data.departmentStats || {})
+      setPaymentMethodStats(data.paymentMethodStats || {})
     } catch (err) {
       setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
     } finally {
@@ -131,9 +128,9 @@ export default function SalesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">매출 조회</h1>
+        <h1 className="text-3xl font-bold tracking-tight">매입 조회</h1>
         <p className="text-muted-foreground mt-2">
-          경영관리 매출 데이터를 조회하고 분석하세요
+          경영관리 매입(지출) 데이터를 조회하고 분석하세요
         </p>
       </div>
 
@@ -187,77 +184,76 @@ export default function SalesPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 매출</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">총 매입</CardTitle>
+            <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summary.totalGrossAmount)}
+            <div className="text-2xl font-bold text-red-600">
+              {formatCurrency(totalAmount)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{sales.length}건</p>
+            <p className="text-xs text-muted-foreground mt-1">{purchases.length}건</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">순매출</CardTitle>
-            <DollarSign className="h-4 w-4 text-emerald-600" />
+            <CardTitle className="text-sm font-medium">계정과목 수</CardTitle>
+            <FileText className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">
-              {formatCurrency(summary.totalNetAmount)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">부가세/수수료 제외</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">부가세</CardTitle>
-            <Calendar className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {formatCurrency(summary.totalVat)}
+            <div className="text-2xl font-bold text-blue-600">
+              {Object.keys(accountTypeStats).length}개
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">카드수수료</CardTitle>
-            <Users className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">부서/담당자 수</CardTitle>
+            <Building2 className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(summary.totalCardFee)}
+              {Object.keys(departmentStats).length}개
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">결제방법 수</CardTitle>
+            <CreditCard className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {Object.keys(paymentMethodStats).length}개
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* 구분별/담당자별 통계 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* 구분별 통계 */}
+      {/* 통계 카드들 */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* 계정과목별 통계 */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">구분별 매출</CardTitle>
+            <CardTitle className="text-lg">계정과목별 매입</CardTitle>
           </CardHeader>
           <CardContent>
-            {Object.keys(categoryStats).length === 0 ? (
+            {Object.keys(accountTypeStats).length === 0 ? (
               <p className="text-muted-foreground text-sm">데이터가 없습니다.</p>
             ) : (
-              <div className="space-y-3">
-                {Object.entries(categoryStats)
-                  .sort((a, b) => b[1].netAmount - a[1].netAmount)
-                  .map(([category, stats]) => (
-                    <div key={category} className="flex justify-between items-center">
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {Object.entries(accountTypeStats)
+                  .sort((a, b) => b[1].amount - a[1].amount)
+                  .map(([type, stats]) => (
+                    <div key={type} className="flex justify-between items-center">
                       <div>
-                        <span className="font-medium">{category || '미분류'}</span>
+                        <span className="font-medium">{type || '미분류'}</span>
                         <span className="text-muted-foreground text-sm ml-2">({stats.count}건)</span>
                       </div>
-                      <span className="font-semibold text-emerald-600">
-                        {formatCurrency(stats.netAmount)}
+                      <span className="font-semibold text-red-600">
+                        {formatCurrency(stats.amount)}
                       </span>
                     </div>
                   ))}
@@ -266,26 +262,54 @@ export default function SalesPage() {
           </CardContent>
         </Card>
 
-        {/* 담당자별 통계 */}
+        {/* 부서별 통계 */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">담당자별 매출</CardTitle>
+            <CardTitle className="text-lg">부서/담당자별 매입</CardTitle>
           </CardHeader>
           <CardContent>
-            {Object.keys(salesPersonStats).length === 0 ? (
+            {Object.keys(departmentStats).length === 0 ? (
               <p className="text-muted-foreground text-sm">데이터가 없습니다.</p>
             ) : (
-              <div className="space-y-3">
-                {Object.entries(salesPersonStats)
-                  .sort((a, b) => b[1].netAmount - a[1].netAmount)
-                  .map(([person, stats]) => (
-                    <div key={person} className="flex justify-between items-center">
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {Object.entries(departmentStats)
+                  .sort((a, b) => b[1].amount - a[1].amount)
+                  .map(([dept, stats]) => (
+                    <div key={dept} className="flex justify-between items-center">
                       <div>
-                        <span className="font-medium">{person}</span>
+                        <span className="font-medium">{dept}</span>
                         <span className="text-muted-foreground text-sm ml-2">({stats.count}건)</span>
                       </div>
-                      <span className="font-semibold text-emerald-600">
-                        {formatCurrency(stats.netAmount)}
+                      <span className="font-semibold text-red-600">
+                        {formatCurrency(stats.amount)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 결제방법별 통계 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">결제방법별 매입</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {Object.keys(paymentMethodStats).length === 0 ? (
+              <p className="text-muted-foreground text-sm">데이터가 없습니다.</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {Object.entries(paymentMethodStats)
+                  .sort((a, b) => b[1].amount - a[1].amount)
+                  .map(([method, stats]) => (
+                    <div key={method} className="flex justify-between items-center">
+                      <div>
+                        <span className="font-medium">{method}</span>
+                        <span className="text-muted-foreground text-sm ml-2">({stats.count}건)</span>
+                      </div>
+                      <span className="font-semibold text-red-600">
+                        {formatCurrency(stats.amount)}
                       </span>
                     </div>
                   ))}
@@ -295,12 +319,12 @@ export default function SalesPage() {
         </Card>
       </div>
 
-      {/* 매출 목록 */}
+      {/* 매입 목록 */}
       <Card>
         <CardHeader>
-          <CardTitle>매출 상세 목록</CardTitle>
+          <CardTitle>매입 상세 목록</CardTitle>
           <CardDescription>
-            선택한 기간의 매출 내역입니다. (최신순)
+            선택한 기간의 매입(지출) 내역입니다. (최신순)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -310,9 +334,9 @@ export default function SalesPage() {
             </div>
           ) : error ? (
             <div className="text-center py-8 text-red-500">{error}</div>
-          ) : sales.length === 0 ? (
+          ) : purchases.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              선택한 기간에 매출 데이터가 없습니다.
+              선택한 기간에 매입 데이터가 없습니다.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -320,47 +344,40 @@ export default function SalesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>날짜</TableHead>
-                    <TableHead>유형</TableHead>
-                    <TableHead>구분</TableHead>
-                    <TableHead>업체명</TableHead>
-                    <TableHead className="text-right">총 매출</TableHead>
-                    <TableHead className="text-right">부가세</TableHead>
-                    <TableHead className="text-right">카드수수료</TableHead>
-                    <TableHead className="text-right">순매출</TableHead>
+                    <TableHead>계정과목</TableHead>
+                    <TableHead>내역</TableHead>
+                    <TableHead className="text-right">금액</TableHead>
                     <TableHead>결제방법</TableHead>
-                    <TableHead>담당자</TableHead>
+                    <TableHead>사용처/담당자</TableHead>
+                    <TableHead>비고</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sales.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell>{formatDate(sale.date)}</TableCell>
+                  {purchases.map((purchase) => (
+                    <TableRow key={purchase.id}>
+                      <TableCell>{formatDate(purchase.date)}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          sale.type === '신규' ? 'bg-blue-100 text-blue-800' :
-                          sale.type === '연장' ? 'bg-green-100 text-green-800' :
-                          sale.type === '소개' ? 'bg-purple-100 text-purple-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {sale.type}
+                        <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                          {purchase.accountType}
                         </span>
                       </TableCell>
-                      <TableCell>{sale.category}</TableCell>
-                      <TableCell className="font-medium">{sale.clientName}</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        {formatCurrency(sale.grossAmount)}
+                      <TableCell className="font-medium">{purchase.description}</TableCell>
+                      <TableCell className="text-right font-semibold text-red-600">
+                        {formatCurrency(purchase.amount)}
                       </TableCell>
-                      <TableCell className="text-right text-orange-600">
-                        {formatCurrency(sale.vat)}
+                      <TableCell>{purchase.paymentMethod}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          purchase.department === '내무부' ? 'bg-blue-100 text-blue-800' :
+                          purchase.department === '기타' ? 'bg-gray-100 text-gray-800' :
+                          'bg-purple-100 text-purple-800'
+                        }`}>
+                          {purchase.department}
+                        </span>
                       </TableCell>
-                      <TableCell className="text-right text-purple-600">
-                        {formatCurrency(sale.cardFee)}
+                      <TableCell className="text-muted-foreground text-sm">
+                        {purchase.note}
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-emerald-600">
-                        {formatCurrency(sale.netAmount)}
-                      </TableCell>
-                      <TableCell>{sale.paymentMethod}</TableCell>
-                      <TableCell>{sale.salesPerson}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

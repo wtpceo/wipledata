@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
 import { getGoogleAuth } from '@/lib/google-sheets'
 
-const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!
+// 경영관리용 별도 구글 시트 (위플경리회계)
+const MANAGEMENT_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_MANAGEMENT_ID || '1Jx141heDJF7FKHSrkwdex_AybJojHMDyhSs_LBRlLv8'
 
 interface SalesRecord {
   date: string
   advertiser: string
   team: string
   description: string
-  amount: number
+  grossAmount: number  // 총 매출 (E열)
+  netAmount: number    // 순매출 (H열)
 }
 
 interface PurchaseRecord {
@@ -22,12 +24,14 @@ interface PurchaseRecord {
 
 interface DailySummary {
   date: string
-  totalSales: number
-  totalPurchase: number
-  profit: number
+  totalGrossSales: number  // 총 매출 (E열 합계)
+  totalNetSales: number    // 순매출 (H열 합계)
+  totalPurchase: number    // 매입 (D열 합계)
+  profit: number           // 순이익 (순매출 - 매입)
   salesDetails: {
     advertiser: string
-    amount: number
+    grossAmount: number
+    netAmount: number
     team: string
     description: string
   }[]
@@ -61,9 +65,27 @@ function parseDate(dateStr: string): Date | null {
       return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00`)
     }
 
-    // YYYY.MM.DD 형식
+    // YYYY.MM.DD 형식 (공백 없음)
     if (/^\d{4}\.\d{2}\.\d{2}$/.test(dateStr)) {
       return new Date(dateStr.replace(/\./g, '-') + 'T00:00:00')
+    }
+
+    // YYYY. M. D 또는 YYYY. MM. DD 형식 (공백 포함, 구글시트 날짜 형식)
+    const dotSpaceMatch = dateStr.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})$/)
+    if (dotSpaceMatch) {
+      const year = dotSpaceMatch[1]
+      const month = dotSpaceMatch[2].padStart(2, '0')
+      const day = dotSpaceMatch[3].padStart(2, '0')
+      return new Date(`${year}-${month}-${day}T00:00:00`)
+    }
+
+    // 한글 형식: "11월 03일" 또는 "11월 3일" (현재 연도 사용)
+    const koreanMatch = dateStr.match(/(\d{1,2})월\s*(\d{1,2})일/)
+    if (koreanMatch) {
+      const currentYear = new Date().getFullYear()
+      const month = koreanMatch[1].padStart(2, '0')
+      const day = koreanMatch[2].padStart(2, '0')
+      return new Date(`${currentYear}-${month}-${day}T00:00:00`)
     }
 
     return new Date(dateStr)
@@ -97,61 +119,66 @@ export async function GET(request: NextRequest) {
 
     const sheets = await getGoogleSheetsClient()
 
-    // 매출 데이터 가져오기 (원본데이터 탭)
-    // 컬럼: 타임스탬프(0), 부서(1), 입력자(2), 매출유형(3), 광고주업체명(4),
-    //       마케팅매체상품명(5), 계약개월수(6), 총계약금액(7), ...계약날짜(14)
+    // 매출 데이터 가져오기 (위플경리회계 시트의 '매출' 탭)
+    // 컬럼: 날짜(A/0), 신규/연장/소개(B/1), 구분(C/2), 업체명(D/3), 금액(E/4),
+    //       부가세(F/5), 카드수수료(G/6), 순매출(H/7), 결제방법(I/8), 담당자명(J/9)
     const salesResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: '원본데이터!A:S', // A부터 S까지 (타임스탬프~순수익)
+      spreadsheetId: MANAGEMENT_SPREADSHEET_ID,
+      range: '매출!A:K', // A부터 K까지
     })
 
-    // 매입 데이터 가져오기 (매입현황 탭)
-    // 컬럼: 타임스탬프(0), 부서(1), 입력자(2), 요청자(3), 매입유형(4),
-    //       거래처명(5), 품목/서비스명(6), 총금액(7), ...거래날짜(10)
+    // 매입 데이터 가져오기 (위플경리회계 시트의 '매입' 탭)
+    // 컬럼: 날짜(A/0), 구분/계정과목(B/1), 내역(C/2), 금액(D/3),
+    //       결제방법(E/4), 사용처/부서/담당자(F/5), 비고(G/6)
     const purchaseResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: '매입현황!A:N', // A부터 N까지 (타임스탬프~분기)
+      spreadsheetId: MANAGEMENT_SPREADSHEET_ID,
+      range: '매입!A:G', // A부터 G까지
     })
 
     const salesRows = salesResponse.data.values || []
     const purchaseRows = purchaseResponse.data.values || []
 
     // 매출 데이터 파싱 (첫 행은 헤더)
-    // 원본데이터: 계약날짜(14), 광고주업체명(4), 부서(1), 마케팅매체상품명(5), 총계약금액(7)
+    // 위플경리회계 매출탭: 날짜(0), 신규/연장/소개(1), 구분(2), 업체명(3), 금액(4),
+    //                    부가세(5), 카드수수료(6), 순매출(7), 결제방법(8), 담당자명(9)
     const salesRecords: SalesRecord[] = []
     for (let i = 1; i < salesRows.length; i++) {
       const row = salesRows[i]
-      const date = parseDate(row[14]) // 계약날짜
+      const date = parseDate(row[0]) // 날짜 (A열)
       if (!date || date < startDate || date > endDate) continue
 
-      const amount = parseFloat(row[7]?.replace(/[^0-9.-]/g, '') || '0') // 총계약금액
-      if (isNaN(amount) || amount === 0) continue
+      const grossAmount = parseFloat(row[4]?.replace(/[^0-9.-]/g, '') || '0') // 총 매출 (E열)
+      const netAmount = parseFloat(row[7]?.replace(/[^0-9.-]/g, '') || '0') // 순매출 (H열)
+      if ((isNaN(grossAmount) || grossAmount === 0) && (isNaN(netAmount) || netAmount === 0)) continue
 
       salesRecords.push({
         date: formatDate(date),
-        advertiser: row[4] || '', // 광고주업체명
-        team: row[1] || '', // 부서
-        description: row[5] || '', // 마케팅매체상품명
-        amount: amount,
+        advertiser: row[3] || '', // 업체명 (D열)
+        team: row[9] || '', // 담당자명 (J열)
+        description: `${row[2] || ''} (${row[1] || ''})`, // 구분 + 신규/연장/소개
+        grossAmount: grossAmount || 0,
+        netAmount: netAmount || 0,
       })
     }
 
     // 매입 데이터 파싱 (첫 행은 헤더)
-    // 매입현황: 거래날짜(10), 거래처명(5), 부서(1), 품목/서비스명(6), 총금액(7)
+    // 위플경리회계 매입탭: 날짜(0), 구분/계정과목(1), 내역(2), 금액(3),
+    //                    결제방법(4), 사용처/부서/담당자(5), 비고(6)
     const purchaseRecords: PurchaseRecord[] = []
+
     for (let i = 1; i < purchaseRows.length; i++) {
       const row = purchaseRows[i]
-      const date = parseDate(row[10]) // 거래날짜
+      const date = parseDate(row[0]) // 날짜 (A열)
       if (!date || date < startDate || date > endDate) continue
 
-      const amount = parseFloat(row[7]?.replace(/[^0-9.-]/g, '') || '0') // 총금액
+      const amount = parseFloat(row[3]?.replace(/[^0-9.-]/g, '') || '0') // 금액 (D열)
       if (isNaN(amount) || amount === 0) continue
 
       purchaseRecords.push({
         date: formatDate(date),
-        advertiser: row[5] || '', // 거래처명
-        team: row[1] || '', // 부서
-        description: row[6] || '', // 품목/서비스명
+        advertiser: row[2] || '', // 내역 (C열)
+        team: row[5] || '', // 사용처/부서/담당자(F열)
+        description: row[1] || '', // 구분/계정과목 (B열)
         amount: amount,
       })
     }
@@ -165,7 +192,8 @@ export async function GET(request: NextRequest) {
       const dateKey = formatDate(currentDate)
       summaryMap.set(dateKey, {
         date: dateKey,
-        totalSales: 0,
+        totalGrossSales: 0,
+        totalNetSales: 0,
         totalPurchase: 0,
         profit: 0,
         salesDetails: [],
@@ -178,10 +206,12 @@ export async function GET(request: NextRequest) {
     salesRecords.forEach((record) => {
       const summary = summaryMap.get(record.date)
       if (summary) {
-        summary.totalSales += record.amount
+        summary.totalGrossSales += record.grossAmount
+        summary.totalNetSales += record.netAmount
         summary.salesDetails.push({
           advertiser: record.advertiser,
-          amount: record.amount,
+          grossAmount: record.grossAmount,
+          netAmount: record.netAmount,
           team: record.team,
           description: record.description,
         })
@@ -202,11 +232,11 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 수익 계산 및 데이터가 있는 날짜만 필터링
+    // 순이익 계산 (순매출 - 매입) 및 데이터가 있는 날짜만 필터링
     const summaries = Array.from(summaryMap.values())
       .map((summary) => ({
         ...summary,
-        profit: summary.totalSales - summary.totalPurchase,
+        profit: summary.totalNetSales - summary.totalPurchase,
       }))
       .filter(
         (summary) =>

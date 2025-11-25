@@ -8,12 +8,14 @@ import { Calendar, TrendingUp, TrendingDown, DollarSign, Loader2 } from 'lucide-
 
 interface DailySummary {
   date: string
-  totalSales: number
+  totalGrossSales: number  // 총 매출
+  totalNetSales: number    // 순매출
   totalPurchase: number
   profit: number
   salesDetails: {
     advertiser: string
-    amount: number
+    grossAmount: number
+    netAmount: number
     team: string
     description: string
   }[]
@@ -81,9 +83,10 @@ export default function DailySummaryPage() {
     }).format(amount)
   }
 
-  const totalSales = summaries.reduce((sum, s) => sum + s.totalSales, 0)
+  const totalGrossSales = summaries.reduce((sum, s) => sum + s.totalGrossSales, 0)
+  const totalNetSales = summaries.reduce((sum, s) => sum + s.totalNetSales, 0)
   const totalPurchase = summaries.reduce((sum, s) => sum + s.totalPurchase, 0)
-  const totalProfit = totalSales - totalPurchase
+  const totalProfit = totalNetSales - totalPurchase
 
   return (
     <div className="space-y-6">
@@ -141,7 +144,7 @@ export default function DailySummaryPage() {
       </Card>
 
       {/* 전체 요약 */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">총 매출</CardTitle>
@@ -149,7 +152,19 @@ export default function DailySummaryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalSales)}
+              {formatCurrency(totalGrossSales)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">순매출</CardTitle>
+            <TrendingUp className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">
+              {formatCurrency(totalNetSales)}
             </div>
           </CardContent>
         </Card>
@@ -204,12 +219,20 @@ export default function DailySummaryPage() {
               })}
             </h2>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-sm text-muted-foreground">매출</div>
+                  <div className="text-sm text-muted-foreground">총 매출</div>
                   <div className="text-xl font-bold text-green-600">
-                    {formatCurrency(summary.totalSales)}
+                    {formatCurrency(summary.totalGrossSales)}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-sm text-muted-foreground">순매출</div>
+                  <div className="text-xl font-bold text-emerald-600">
+                    {formatCurrency(summary.totalNetSales)}
                   </div>
                 </CardContent>
               </Card>
@@ -223,7 +246,7 @@ export default function DailySummaryPage() {
               </Card>
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-sm text-muted-foreground">수익</div>
+                  <div className="text-sm text-muted-foreground">순이익</div>
                   <div className="text-xl font-bold text-blue-600">
                     {formatCurrency(summary.profit)}
                   </div>
@@ -241,10 +264,11 @@ export default function DailySummaryPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>광고주</TableHead>
-                        <TableHead>팀</TableHead>
+                        <TableHead>업체명</TableHead>
+                        <TableHead>담당자</TableHead>
                         <TableHead>내용</TableHead>
-                        <TableHead className="text-right">금액</TableHead>
+                        <TableHead className="text-right">총 매출</TableHead>
+                        <TableHead className="text-right">순매출</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -254,7 +278,10 @@ export default function DailySummaryPage() {
                           <TableCell>{detail.team}</TableCell>
                           <TableCell>{detail.description}</TableCell>
                           <TableCell className="text-right text-green-600 font-semibold">
-                            {formatCurrency(detail.amount)}
+                            {formatCurrency(detail.grossAmount)}
+                          </TableCell>
+                          <TableCell className="text-right text-emerald-600 font-semibold">
+                            {formatCurrency(detail.netAmount)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -274,9 +301,9 @@ export default function DailySummaryPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>광고주</TableHead>
-                        <TableHead>팀</TableHead>
-                        <TableHead>내용</TableHead>
+                        <TableHead>내역</TableHead>
+                        <TableHead>사용처/담당자</TableHead>
+                        <TableHead>계정과목</TableHead>
                         <TableHead className="text-right">금액</TableHead>
                       </TableRow>
                     </TableHeader>

@@ -26,7 +26,9 @@ import {
   Briefcase,
   ChevronDown,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Wallet,
+  CreditCard
 } from 'lucide-react'
 
 const navigationConfig = [
@@ -81,9 +83,9 @@ const navigationConfig = [
       { name: '일자별 매출/매입', href: '/daily-summary', icon: Calendar },
       { name: '매출 조회', href: '/sales', icon: FileText },
       { name: '매입 조회', href: '/purchase', icon: FileText },
-      { name: '운영비 조회', href: '/expenses', icon: FileText },
-      { name: '광고주 관리', href: '/clients', icon: Database },
-      { name: '고객 관계 조회', href: '/client-management', icon: Users },
+      { name: '직원 급여 테이블', href: '/salary', icon: Users },
+      { name: '가지급금/가수금', href: '/advance-payment', icon: Wallet },
+      { name: '부채 (미지급금)', href: '/liabilities', icon: CreditCard },
     ]
   },
   {
