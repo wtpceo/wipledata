@@ -28,7 +28,8 @@ import {
   ChevronRight,
   AlertCircle,
   Wallet,
-  CreditCard
+  CreditCard,
+  Landmark
 } from 'lucide-react'
 
 const navigationConfig = [
@@ -86,6 +87,7 @@ const navigationConfig = [
       { name: '직원 급여 테이블', href: '/salary', icon: Users },
       { name: '가지급금/가수금', href: '/advance-payment', icon: Wallet },
       { name: '부채 (미지급금)', href: '/liabilities', icon: CreditCard },
+      { name: '대출 현황', href: '/loans', icon: Landmark },
     ]
   },
   {
