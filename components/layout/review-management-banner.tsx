@@ -6,7 +6,7 @@ import { ExternalLink, MessageSquare } from 'lucide-react'
 export function ReviewManagementBanner() {
   return (
     <Link
-      href="https://review-data-new.vercel.app"
+      href="https://auto-review-dashboard.vercel.app/"
       target="_blank"
       rel="noopener noreferrer"
       className="block w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 transition-all duration-300"
