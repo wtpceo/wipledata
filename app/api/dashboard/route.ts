@@ -298,10 +298,10 @@ export async function GET(request: NextRequest) {
 
     const achievementRate = (currentMonthTotal / monthlyGoal * 100)
 
-    // 1주차 매출 계산 (2025-11-01 ~ 2025-11-09)
+    // 1주차 매출 계산 (2025-12-01 ~ 2025-12-06)
     // O열(인덱스 14): 계약 날짜
-    const week1Start = new Date('2025-11-01T00:00:00')
-    const week1End = new Date('2025-11-09T23:59:59')
+    const week1Start = new Date('2025-12-01T00:00:00')
+    const week1End = new Date('2025-12-06T23:59:59')
 
     // 1주차 영업부 매출 (O열의 계약 날짜 기준)
     const week1SalesSales = sales.filter(sale => {
