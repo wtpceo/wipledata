@@ -29,7 +29,8 @@ import {
   AlertCircle,
   Wallet,
   CreditCard,
-  Landmark
+  Landmark,
+  MonitorCheck
 } from 'lucide-react'
 
 const navigationConfig = [
@@ -59,6 +60,13 @@ const navigationConfig = [
     roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '제안서 목록', href: '/proposals', icon: FileText },
+    ]
+  },
+  {
+    title: '데이터 관리',
+    roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
+    items: [
+      { name: '온라인 점검 현황', href: '/data-management/online-check', icon: MonitorCheck },
     ]
   },
   {

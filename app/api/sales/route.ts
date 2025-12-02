@@ -81,9 +81,12 @@ export async function POST(request: NextRequest) {
       contractDate,
       salesType,
       clientName,
+      clientAddress, // 광고주 주소
+      clientContact, // 광고주 연락처
       productName,
       productOther,
       contractMonths,
+      contractWeeks, // 옥외매체용 주 단위
 
       // 섹션 3: 결제 정보
       totalAmount,
@@ -95,16 +98,32 @@ export async function POST(request: NextRequest) {
       // 섹션 4: 상세 내용
       consultationContent,
       specialNotes,
+
+      // 섹션 5: 온라인 점검 (옥외매체 전용)
+      onlineCheckRequested,
+      onlineCheckDateTime,
     } = body
 
     // 현재 날짜와 시간
     const now = new Date().toISOString()
 
     // 최종 상품명 결정 (기타 선택 시 productOther 값 사용)
-    const finalProductName = productName === '기타' ? productOther : productName
+    // productName이 배열인 경우 (중복 선택) 처리
+    let finalProductName = productName
+    if (productName && productName.includes('기타') && productOther) {
+      finalProductName = productName.replace('기타', productOther)
+    }
 
     // 최종 결제 방식 결정 (기타 선택 시 paymentMethodOther 값 사용)
     const finalPaymentMethod = paymentMethod === '기타' ? paymentMethodOther : paymentMethod
+
+    // 옥외매체 여부 확인
+    const isOutdoorMedia = productName && (productName.includes('포커스미디어') || productName.includes('타운보드'))
+
+    // 계약 기간 표시 (개월 또는 주)
+    const contractPeriod = isOutdoorMedia && contractWeeks
+      ? `${contractWeeks}주`
+      : contractMonths ? `${contractMonths}개월` : ''
 
     // Google Sheets에 데이터 쓰기
     // Sales 시트 컬럼 구조
@@ -114,8 +133,10 @@ export async function POST(request: NextRequest) {
       inputPerson,
       salesType,
       clientName,
+      clientAddress || '', // 광고주 주소
+      clientContact || '', // 광고주 연락처
       finalProductName,
-      contractMonths.toString(),
+      contractPeriod, // 개월 또는 주 단위로 표시
       '', // 월 계약금액 (계산 필요시 추가)
       totalAmount.toString(),
       finalPaymentMethod,
@@ -125,6 +146,8 @@ export async function POST(request: NextRequest) {
       specialNotes || '',
       now, // 생성일시
       now, // 수정일시
+      onlineCheckRequested ? 'Y' : 'N', // 온라인 점검 희망 여부
+      onlineCheckDateTime || '', // 온라인 점검 희망 일시
     ]
 
     // 원본데이터 탭 구조 (스크린샷 기준)
@@ -132,10 +155,15 @@ export async function POST(request: NextRequest) {
     // 계약 개월 수, 총 계약금액, 결제 방식, 결제 승인 번호,
     // 확정 외주비, 광고주 상담 내용, 특이사항, 계약서 파일및 기타 자료,
     // 계약날짜, 계약종료일, 월 평균 금액, 순수익, 입력 년 월, 분기
-    const monthlyAmount = Math.round(totalAmount / contractMonths)
+    const effectiveMonths = contractMonths || (contractWeeks ? Math.ceil(contractWeeks / 4) : 1)
+    const monthlyAmount = Math.round(totalAmount / effectiveMonths)
     const netProfit = totalAmount - (outsourcingCost || 0)
     const contractEndDate = new Date(contractDate)
-    contractEndDate.setMonth(contractEndDate.getMonth() + contractMonths)
+    if (isOutdoorMedia && contractWeeks) {
+      contractEndDate.setDate(contractEndDate.getDate() + (contractWeeks * 7))
+    } else {
+      contractEndDate.setMonth(contractEndDate.getMonth() + (contractMonths || 0))
+    }
     const inputYearMonth = contractDate.substring(0, 7) // YYYY-MM
     const quarter = `${contractDate.substring(0, 4)}-Q${Math.ceil((new Date(contractDate).getMonth() + 1) / 3)}`
 
@@ -145,8 +173,10 @@ export async function POST(request: NextRequest) {
       normalizeStaffName(inputPerson), // 입력자 - 정규화된 이름
       salesType, // 매출 유형
       clientName, // 광고주 업체명
+      clientAddress || '', // 광고주 주소
+      clientContact || '', // 광고주 연락처
       finalProductName, // 마케팅 매체 상품명
-      contractMonths.toString(), // 계약 개월 수
+      contractPeriod, // 계약 기간 (개월 또는 주)
       totalAmount.toString(), // 총 계약금액
       finalPaymentMethod, // 결제 방식
       approvalNumber || '', // 결제 승인 번호
@@ -160,6 +190,8 @@ export async function POST(request: NextRequest) {
       netProfit.toString(), // 순수익
       inputYearMonth, // 입력 년 월
       quarter, // 분기
+      onlineCheckRequested ? 'Y' : 'N', // 온라인 점검 희망 여부
+      onlineCheckDateTime || '', // 온라인 점검 희망 일시
     ]
 
     // Sales 시트와 원본데이터 탭에 동시에 쓰기
@@ -169,8 +201,8 @@ export async function POST(request: NextRequest) {
       console.log('Raw data row:', rawDataRow)
 
       const results = await Promise.all([
-        writeToSheet(`${SHEETS.SALES}!A:P`, [salesRow]),
-        writeToSheet('원본데이터!A:T', [rawDataRow])
+        writeToSheet(`${SHEETS.SALES}!A:T`, [salesRow]),
+        writeToSheet('원본데이터!A:X', [rawDataRow])
       ])
 
       console.log('✅ Successfully written to both sheets')
