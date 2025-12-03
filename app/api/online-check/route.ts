@@ -6,14 +6,17 @@ export async function GET() {
   try {
     // 원본데이터에서 온라인 점검 희망 여부가 'Y'인 데이터만 조회
     // 컬럼: A(타임스탬프), B(부서), C(입력자), D(매출유형), E(광고주), F(상품명),
-    //       G(계약기간), H(총금액), ..., O(계약날짜), U(온라인점검여부), V(점검일시)
-    const data = await readFromSheet('원본데이터!A2:W')
+    //       G(계약기간), H(총금액), I(결제방식), J(승인번호), K(외주비), L(상담내용),
+    //       M(특이사항), N(파일), O(계약날짜), P(종료일), Q(월평균), R(순수익),
+    //       S(입력년월), T(분기), U(온라인점검여부), V(점검일시), W(주소), X(연락처), Y(점검상태)
+    const data = await readFromSheet('원본데이터!A2:Y')
 
     if (!data || data.length === 0) {
       return NextResponse.json({ data: [] })
     }
 
     // 온라인 점검 희망 업체만 필터링
+    // 인덱스: A=0, B=1, ..., U=20(점검여부), V=21(점검일시), W=22(주소), X=23(연락처), Y=24(점검상태)
     const onlineCheckData = data
       .map((row, index) => ({
         id: `check-${index + 2}`,
@@ -29,7 +32,9 @@ export async function GET() {
         contractDate: row[14] || '',
         onlineCheckRequested: row[20] || 'N',
         onlineCheckDateTime: row[21] || '',
-        checkStatus: row[22] || 'pending', // 점검 상태 (pending, completed, cancelled)
+        clientAddress: row[22] || '',
+        clientContact: row[23] || '',
+        checkStatus: row[24] || 'pending', // Y열: 점검 상태 (pending, completed, cancelled)
       }))
       .filter(item =>
         item.onlineCheckRequested === 'Y' &&
@@ -72,8 +77,8 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // W열(23번째 컬럼)에 상태 업데이트
-    await updateSheet(`원본데이터!W${rowNumber}`, [[status]])
+    // Y열(25번째 컬럼)에 상태 업데이트
+    await updateSheet(`원본데이터!Y${rowNumber}`, [[status]])
 
     return NextResponse.json({
       success: true,

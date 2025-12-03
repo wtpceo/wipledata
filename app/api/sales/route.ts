@@ -126,15 +126,13 @@ export async function POST(request: NextRequest) {
       : contractMonths ? `${contractMonths}개월` : ''
 
     // Google Sheets에 데이터 쓰기
-    // Sales 시트 컬럼 구조
+    // Sales 시트 기존 컬럼 구조 유지 (주소/연락처는 맨 뒤에 추가)
     const salesRow = [
       contractDate,
       department,
       inputPerson,
       salesType,
       clientName,
-      clientAddress || '', // 광고주 주소
-      clientContact || '', // 광고주 연락처
       finalProductName,
       contractPeriod, // 개월 또는 주 단위로 표시
       '', // 월 계약금액 (계산 필요시 추가)
@@ -148,6 +146,8 @@ export async function POST(request: NextRequest) {
       now, // 수정일시
       onlineCheckRequested ? 'Y' : 'N', // 온라인 점검 희망 여부
       onlineCheckDateTime || '', // 온라인 점검 희망 일시
+      clientAddress || '', // 광고주 주소 (신규 추가)
+      clientContact || '', // 광고주 연락처 (신규 추가)
     ]
 
     // 원본데이터 탭 구조 (스크린샷 기준)
@@ -167,31 +167,37 @@ export async function POST(request: NextRequest) {
     const inputYearMonth = contractDate.substring(0, 7) // YYYY-MM
     const quarter = `${contractDate.substring(0, 4)}-Q${Math.ceil((new Date(contractDate).getMonth() + 1) / 3)}`
 
+    // 원본데이터 시트 기존 컬럼 구조 유지 (주소/연락처는 맨 뒤에 추가)
+    // A: 타임스탬프, B: 부서, C: 입력자, D: 매출유형, E: 광고주명,
+    // F: 상품명, G: 계약기간, H: 총금액, I: 결제방식, J: 승인번호,
+    // K: 외주비, L: 상담내용, M: 특이사항, N: 파일, O: 계약날짜,
+    // P: 계약종료일, Q: 월평균금액, R: 순수익, S: 입력년월, T: 분기,
+    // U: 온라인점검여부, V: 온라인점검일시, W: 광고주주소, X: 광고주연락처
     const rawDataRow = [
-      now, // 타임스탬프
-      department, // 부서
-      normalizeStaffName(inputPerson), // 입력자 - 정규화된 이름
-      salesType, // 매출 유형
-      clientName, // 광고주 업체명
-      clientAddress || '', // 광고주 주소
-      clientContact || '', // 광고주 연락처
-      finalProductName, // 마케팅 매체 상품명
-      contractPeriod, // 계약 기간 (개월 또는 주)
-      totalAmount.toString(), // 총 계약금액
-      finalPaymentMethod, // 결제 방식
-      approvalNumber || '', // 결제 승인 번호
-      outsourcingCost ? outsourcingCost.toString() : '0', // 확정 외주비
-      consultationContent || '', // 광고주 상담 내용
-      specialNotes || '', // 특이사항
-      '', // 계약서 파일및 기타 자료 (파일 업로드는 별도 처리 필요)
-      contractDate, // 계약날짜
-      contractEndDate.toISOString().split('T')[0], // 계약종료일
-      monthlyAmount.toString(), // 월 평균 금액
-      netProfit.toString(), // 순수익
-      inputYearMonth, // 입력 년 월
-      quarter, // 분기
-      onlineCheckRequested ? 'Y' : 'N', // 온라인 점검 희망 여부
-      onlineCheckDateTime || '', // 온라인 점검 희망 일시
+      now, // A: 타임스탬프
+      department, // B: 부서
+      normalizeStaffName(inputPerson), // C: 입력자 - 정규화된 이름
+      salesType, // D: 매출 유형
+      clientName, // E: 광고주 업체명
+      finalProductName, // F: 마케팅 매체 상품명
+      contractPeriod, // G: 계약 기간 (개월 또는 주)
+      totalAmount.toString(), // H: 총 계약금액
+      finalPaymentMethod, // I: 결제 방식
+      approvalNumber || '', // J: 결제 승인 번호
+      outsourcingCost ? outsourcingCost.toString() : '0', // K: 확정 외주비
+      consultationContent || '', // L: 광고주 상담 내용
+      specialNotes || '', // M: 특이사항
+      '', // N: 계약서 파일및 기타 자료 (파일 업로드는 별도 처리 필요)
+      contractDate, // O: 계약날짜
+      contractEndDate.toISOString().split('T')[0], // P: 계약종료일
+      monthlyAmount.toString(), // Q: 월 평균 금액
+      netProfit.toString(), // R: 순수익
+      inputYearMonth, // S: 입력 년 월
+      quarter, // T: 분기
+      onlineCheckRequested ? 'Y' : 'N', // U: 온라인 점검 희망 여부
+      onlineCheckDateTime || '', // V: 온라인 점검 희망 일시
+      clientAddress || '', // W: 광고주 주소 (신규 추가)
+      clientContact || '', // X: 광고주 연락처 (신규 추가)
     ]
 
     // Sales 시트와 원본데이터 탭에 동시에 쓰기
