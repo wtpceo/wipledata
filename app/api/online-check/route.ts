@@ -8,15 +8,15 @@ export async function GET() {
     // 컬럼: A(타임스탬프), B(부서), C(입력자), D(매출유형), E(광고주), F(상품명),
     //       G(계약기간), H(총금액), I(결제방식), J(승인번호), K(외주비), L(상담내용),
     //       M(특이사항), N(파일), O(계약날짜), P(종료일), Q(월평균), R(순수익),
-    //       S(입력년월), T(분기), U(온라인점검여부), V(점검일시), W(주소), X(연락처), Y(점검상태)
-    const data = await readFromSheet('원본데이터!A2:Y')
+    //       S(입력년월), T(분기), U(마케팅담당자), V(온라인점검여부), W(점검일시), X(주소), Y(연락처), Z(점검상태)
+    const data = await readFromSheet('원본데이터!A2:Z')
 
     if (!data || data.length === 0) {
       return NextResponse.json({ data: [] })
     }
 
     // 온라인 점검 희망 업체만 필터링
-    // 인덱스: A=0, B=1, ..., U=20(점검여부), V=21(점검일시), W=22(주소), X=23(연락처), Y=24(점검상태)
+    // 인덱스: U=20(마케팅담당자), V=21(점검여부), W=22(점검일시), X=23(주소), Y=24(연락처), Z=25(점검상태)
     console.log('=== Online Check Debug ===')
     console.log('Total rows:', data.length)
 
@@ -34,16 +34,17 @@ export async function GET() {
           totalAmount: parseInt(String(row[7] || '0').replace(/,/g, '')),
           paymentMethod: row[8] || '',
           contractDate: row[14] || '',
-          onlineCheckRequested: row[20] || 'N',
-          onlineCheckDateTime: row[21] || '',
-          clientAddress: row[22] || '',
-          clientContact: row[23] || '',
-          checkStatus: row[24] || 'pending',
+          marketingManager: row[20] || '', // U열: 마케팅 담당자
+          onlineCheckRequested: row[21] || 'N', // V열: 온라인 점검 여부
+          onlineCheckDateTime: row[22] || '', // W열: 점검 일시
+          clientAddress: row[23] || '', // X열: 주소
+          clientContact: row[24] || '', // Y열: 연락처
+          checkStatus: row[25] || 'pending', // Z열: 점검 상태
         }
 
         // 옥외매체 데이터 디버깅
         if (item.productName.includes('포커스미디어') || item.productName.includes('타운보드')) {
-          console.log(`Row ${index + 2}: ${item.clientName}, 상품: ${item.productName}, 점검여부: ${item.onlineCheckRequested}, U열값: "${row[20]}"`)
+          console.log(`Row ${index + 2}: ${item.clientName}, 상품: ${item.productName}, 점검여부: ${item.onlineCheckRequested}, V열값: "${row[21]}"`)
         }
 
         return item
@@ -89,8 +90,8 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Y열(25번째 컬럼)에 상태 업데이트
-    await updateSheet(`원본데이터!Y${rowNumber}`, [[status]])
+    // Z열(26번째 컬럼)에 상태 업데이트
+    await updateSheet(`원본데이터!Z${rowNumber}`, [[status]])
 
     return NextResponse.json({
       success: true,
