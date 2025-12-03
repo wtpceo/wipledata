@@ -17,25 +17,37 @@ export async function GET() {
 
     // 온라인 점검 희망 업체만 필터링
     // 인덱스: A=0, B=1, ..., U=20(점검여부), V=21(점검일시), W=22(주소), X=23(연락처), Y=24(점검상태)
+    console.log('=== Online Check Debug ===')
+    console.log('Total rows:', data.length)
+
     const onlineCheckData = data
-      .map((row, index) => ({
-        id: `check-${index + 2}`,
-        timestamp: row[0] || '',
-        department: row[1] || '',
-        inputPerson: row[2] || '',
-        salesType: row[3] || '',
-        clientName: row[4] || '',
-        productName: row[5] || '',
-        contractPeriod: row[6] || '',
-        totalAmount: parseInt(row[7]?.replace(/,/g, '') || '0'),
-        paymentMethod: row[8] || '',
-        contractDate: row[14] || '',
-        onlineCheckRequested: row[20] || 'N',
-        onlineCheckDateTime: row[21] || '',
-        clientAddress: row[22] || '',
-        clientContact: row[23] || '',
-        checkStatus: row[24] || 'pending', // Y열: 점검 상태 (pending, completed, cancelled)
-      }))
+      .map((row, index) => {
+        const item = {
+          id: `check-${index + 2}`,
+          timestamp: row[0] || '',
+          department: row[1] || '',
+          inputPerson: row[2] || '',
+          salesType: row[3] || '',
+          clientName: row[4] || '',
+          productName: row[5] || '',
+          contractPeriod: row[6] || '',
+          totalAmount: parseInt(String(row[7] || '0').replace(/,/g, '')),
+          paymentMethod: row[8] || '',
+          contractDate: row[14] || '',
+          onlineCheckRequested: row[20] || 'N',
+          onlineCheckDateTime: row[21] || '',
+          clientAddress: row[22] || '',
+          clientContact: row[23] || '',
+          checkStatus: row[24] || 'pending',
+        }
+
+        // 옥외매체 데이터 디버깅
+        if (item.productName.includes('포커스미디어') || item.productName.includes('타운보드')) {
+          console.log(`Row ${index + 2}: ${item.clientName}, 상품: ${item.productName}, 점검여부: ${item.onlineCheckRequested}, U열값: "${row[20]}"`)
+        }
+
+        return item
+      })
       .filter(item =>
         item.onlineCheckRequested === 'Y' &&
         (item.productName.includes('포커스미디어') || item.productName.includes('타운보드'))

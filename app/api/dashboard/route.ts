@@ -28,6 +28,11 @@ export async function GET(request: NextRequest) {
     const prevYear = prevMonthDate.getFullYear()
     const prevMonthNum = prevMonthDate.getMonth() + 1
 
+    // 디버그: 전체 데이터 개수
+    console.log('=== Dashboard Debug ===')
+    console.log('Total raw data rows:', rawData.length)
+    console.log('Current month filter:', month)
+
     // 데이터 파싱
     const sales = rawData.map((row) => {
       // S열(인덱스 18): 입력 월, H열(인덱스 7): 총 계약금액, F열(인덱스 5): 매체, C열(인덱스 2): 입력자
@@ -119,6 +124,18 @@ export async function GET(request: NextRequest) {
         return false
       }
     })
+
+    // 디버그: 필터링된 데이터 개수
+    console.log('Filtered current month sales:', currentMonthSales.length)
+    if (currentMonthSales.length > 0) {
+      console.log('Sample filtered data:', currentMonthSales.slice(0, 3).map(s => ({
+        date: s.date,
+        department: s.department,
+        clientName: s.clientName,
+        inputMonth: s.inputMonth,
+        totalAmount: s.totalAmount
+      })))
+    }
 
     // 이전 월 데이터 필터링
     // 영업부: S열(입력 월) 기준, 내근직: A열(타임스탬프) 기준
