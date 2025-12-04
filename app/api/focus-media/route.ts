@@ -10,16 +10,29 @@ export async function GET(request: NextRequest) {
     // 원본데이터에서 데이터 읽기
     const data = await readFromSheet('원본데이터!A2:Y')
 
+    console.log('=== Focus Media Debug ===')
+    console.log('Total rows:', data?.length || 0)
+
     if (!data || data.length === 0) {
       return NextResponse.json({ data: [], summary: null })
     }
 
+    // 디버그: 첫 몇 행의 F열(상품명) 값 확인
+    console.log('Sample product names (F열):')
+    data.slice(0, 10).forEach((row, i) => {
+      console.log(`Row ${i + 2}: F열="${row[5]}", H열="${row[7]}", O열="${row[14]}"`)
+    })
+
     // 포커스미디어 데이터만 필터링
-    // F열(인덱스 5): 마케팅 매체 상품명
+    // F열(인덱스 5): 마케팅 매체 상품명, H열(인덱스 7): 계약금액, O열(인덱스 14): 계약날짜
     const focusMediaData = data
       .map((row, index) => {
         const productName = row[5] || ''
-        if (!productName.includes('포커스미디어')) return null
+
+        // 포커스미디어 포함 여부 체크 (대소문자 무시)
+        if (!productName.toLowerCase().includes('포커스미디어')) return null
+
+        console.log(`Found 포커스미디어 at row ${index + 2}: ${row[4]}, ${productName}, ${row[7]}`)
 
         const totalAmount = parseInt(String(row[7] || '0').replace(/,/g, ''))
         const outsourcingCost = parseInt(String(row[10] || '0').replace(/,/g, ''))
@@ -29,44 +42,65 @@ export async function GET(request: NextRequest) {
           id: `focus-${index + 2}`,
           timestamp: row[0] || '',
           department: row[1] || '',
-          inputPerson: row[2] || '',
-          salesType: row[3] || '', // 신규/연장
-          clientName: row[4] || '',
-          productName: productName,
-          contractPeriod: row[6] || '',
-          totalAmount: totalAmount,
-          paymentMethod: row[8] || '',
-          outsourcingCost: outsourcingCost,
+          inputPerson: row[2] || '', // C열: 입력자
+          salesType: row[3] || '', // D열: 신규/연장
+          clientName: row[4] || '', // E열: 광고주명
+          productName: productName, // F열: 상품명
+          contractPeriod: row[6] || '', // G열: 계약기간
+          totalAmount: totalAmount, // H열: 계약금액
+          paymentMethod: row[8] || '', // I열: 결제방식
+          outsourcingCost: outsourcingCost, // K열: 외주비
           netProfit: netProfit,
-          contractDate: row[14] || '',
-          contractEndDate: row[15] || '',
-          inputMonth: row[18] || '',
-          marketingManager: row[20] || '',
-          onlineCheckRequested: row[21] || 'N',
-          onlineCheckDateTime: row[22] || '',
-          clientAddress: row[23] || '',
-          clientContact: row[24] || '',
+          contractDate: row[14] || '', // O열: 계약날짜
+          contractEndDate: row[15] || '', // P열: 계약종료일
+          inputMonth: row[18] || '', // S열: 입력년월
+          marketingManager: row[20] || '', // U열: 마케팅담당자
+          onlineCheckRequested: row[21] || 'N', // V열: 온라인점검여부
+          onlineCheckDateTime: row[22] || '', // W열: 점검일시
+          clientAddress: row[23] || '', // X열: 주소
+          clientContact: row[24] || '', // Y열: 연락처
         }
       })
       .filter(item => item !== null)
 
-    // 월별 필터링
+    console.log('Found focus media items:', focusMediaData.length)
+
+    // 월별 필터링 (O열 계약날짜 기준)
     const filteredByMonth = month === 'all'
       ? focusMediaData
       : focusMediaData.filter(item => {
           if (!item) return false
-          // S열(입력월) 또는 O열(계약날짜) 기준으로 필터링
-          const inputMonth = item.inputMonth
-          const contractDate = item.contractDate
 
-          if (inputMonth && inputMonth.includes('-')) {
-            return inputMonth === month
+          const contractDate = item.contractDate
+          if (!contractDate) return false
+
+          // 다양한 날짜 형식 처리
+          let dateMonth = ''
+
+          // YYYY-MM-DD 형식
+          if (contractDate.includes('-')) {
+            dateMonth = contractDate.substring(0, 7) // YYYY-MM
           }
-          if (contractDate && contractDate.startsWith(month)) {
-            return true
+          // YYYY.MM.DD 형식
+          else if (contractDate.includes('.')) {
+            const parts = contractDate.split('.')
+            if (parts.length >= 2) {
+              dateMonth = `${parts[0]}-${parts[1].padStart(2, '0')}`
+            }
           }
-          return false
+          // MM/DD/YYYY 형식
+          else if (contractDate.includes('/')) {
+            const parts = contractDate.split('/')
+            if (parts.length === 3) {
+              dateMonth = `${parts[2]}-${parts[0].padStart(2, '0')}`
+            }
+          }
+
+          console.log(`Filter check: contractDate=${contractDate}, dateMonth=${dateMonth}, target=${month}`)
+          return dateMonth === month
         })
+
+    console.log(`Filtered by month ${month}: ${filteredByMonth.length} items`)
 
     // 통계 계산
     const totalSales = filteredByMonth.reduce((sum, item) => sum + (item?.totalAmount || 0), 0)
@@ -93,7 +127,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 월별 추이 (최근 6개월)
+    // 월별 추이 (최근 6개월) - O열 계약날짜 기준
     const monthlyTrend: { month: string; amount: number; count: number }[] = []
     for (let i = 5; i >= 0; i--) {
       const trendDate = new Date(month + '-01')
@@ -102,16 +136,25 @@ export async function GET(request: NextRequest) {
 
       const monthData = focusMediaData.filter(item => {
         if (!item) return false
-        const inputMonth = item.inputMonth
         const contractDate = item.contractDate
+        if (!contractDate) return false
 
-        if (inputMonth && inputMonth.includes('-')) {
-          return inputMonth === trendMonth
+        let dateMonth = ''
+        if (contractDate.includes('-')) {
+          dateMonth = contractDate.substring(0, 7)
+        } else if (contractDate.includes('.')) {
+          const parts = contractDate.split('.')
+          if (parts.length >= 2) {
+            dateMonth = `${parts[0]}-${parts[1].padStart(2, '0')}`
+          }
+        } else if (contractDate.includes('/')) {
+          const parts = contractDate.split('/')
+          if (parts.length === 3) {
+            dateMonth = `${parts[2]}-${parts[0].padStart(2, '0')}`
+          }
         }
-        if (contractDate && contractDate.startsWith(trendMonth)) {
-          return true
-        }
-        return false
+
+        return dateMonth === trendMonth
       })
 
       monthlyTrend.push({
