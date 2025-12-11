@@ -8,8 +8,8 @@ export async function GET() {
     // 컬럼: A(타임스탬프), B(부서), C(입력자), D(매출유형), E(광고주), F(상품명),
     //       G(계약기간), H(총금액), I(결제방식), J(승인번호), K(외주비), L(상담내용),
     //       M(특이사항), N(파일), O(계약날짜), P(종료일), Q(월평균), R(순수익),
-    //       S(입력년월), T(분기), U(마케팅담당자), V(온라인점검여부), W(점검일시), X(주소), Y(연락처), Z(점검상태)
-    const data = await readFromSheet('원본데이터!A2:Z')
+    //       S(입력년월), T(분기), U(마케팅담당자), V(온라인점검여부), W(점검일시), X(주소), Y(연락처), Z(점검상태), AA(처리메모)
+    const data = await readFromSheet('원본데이터!A2:AA')
 
     if (!data || data.length === 0) {
       return NextResponse.json({ data: [] })
@@ -24,6 +24,7 @@ export async function GET() {
       .map((row, index) => {
         const item = {
           id: `check-${index + 2}`,
+          rowNumber: index + 2,
           timestamp: row[0] || '',
           department: row[1] || '',
           inputPerson: row[2] || '',
@@ -40,6 +41,7 @@ export async function GET() {
           clientAddress: row[23] || '', // X열: 주소
           clientContact: row[24] || '', // Y열: 연락처
           checkStatus: row[25] || 'pending', // Z열: 점검 상태
+          processMemo: row[26] || '', // AA열: 처리 메모
         }
 
         // 옥외매체 데이터 디버깅
@@ -68,14 +70,14 @@ export async function GET() {
   }
 }
 
-// PATCH: 점검 상태 업데이트
+// PATCH: 점검 상태 및 메모 업데이트
 export async function PATCH(request: NextRequest) {
   try {
-    const { id, status } = await request.json()
+    const { id, status, memo } = await request.json()
 
-    if (!id || !status) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'ID is required' },
         { status: 400 }
       )
     }
@@ -90,17 +92,24 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Z열(26번째 컬럼)에 상태 업데이트
-    await updateSheet(`원본데이터!Z${rowNumber}`, [[status]])
+    // 상태 업데이트 (Z열)
+    if (status) {
+      await updateSheet(`원본데이터!Z${rowNumber}`, [[status]])
+    }
+
+    // 메모 업데이트 (AA열)
+    if (memo !== undefined) {
+      await updateSheet(`원본데이터!AA${rowNumber}`, [[memo]])
+    }
 
     return NextResponse.json({
       success: true,
-      message: '상태가 업데이트되었습니다.',
+      message: '업데이트되었습니다.',
     })
   } catch (error) {
     console.error('Error updating check status:', error)
     return NextResponse.json(
-      { error: 'Failed to update status' },
+      { error: 'Failed to update' },
       { status: 500 }
     )
   }
