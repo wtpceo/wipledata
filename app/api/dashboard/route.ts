@@ -335,6 +335,7 @@ export async function GET(request: NextRequest) {
 
       console.log('Week 1 goals:', week1GoalSales, week1GoalInternal)
       console.log('Week 2 goals:', week2GoalSales, week2GoalInternal)
+      console.log('Week 3 goals:', week3GoalSales, week3GoalInternal)
     } catch (error) {
       console.error('Error reading 목표관리 sheet:', error)
     }
@@ -404,12 +405,15 @@ export async function GET(request: NextRequest) {
 
     console.log('Week 1 sales:', week1Sales)
     console.log('Week 2 sales:', week2Sales)
+    console.log('Week 3 sales:', week3Sales)
 
     // 주차별 달성률 계산
     const week1AchievementSales = week1GoalSales > 0 ? (week1Sales.salesDept / week1GoalSales * 100) : 0
     const week1AchievementInternal = week1GoalInternal > 0 ? (week1Sales.internalDept / week1GoalInternal * 100) : 0
     const week2AchievementSales = week2GoalSales > 0 ? (week2Sales.salesDept / week2GoalSales * 100) : 0
     const week2AchievementInternal = week2GoalInternal > 0 ? (week2Sales.internalDept / week2GoalInternal * 100) : 0
+    const week3AchievementSales = week3GoalSales > 0 ? (week3Sales.salesDept / week3GoalSales * 100) : 0
+    const week3AchievementInternal = week3GoalInternal > 0 ? (week3Sales.internalDept / week3GoalInternal * 100) : 0
 
     return NextResponse.json({
       overview: {
@@ -450,6 +454,19 @@ export async function GET(request: NextRequest) {
           goal: week2GoalInternal,
           current: week2Sales.internalDept,
           achievementRate: Math.round(week2AchievementInternal * 10) / 10
+        }
+      } : undefined,
+      // 3주차 목표
+      week3Goals: week3GoalSales > 0 || week3GoalInternal > 0 ? {
+        sales: {
+          goal: week3GoalSales,
+          current: week3Sales.salesDept,
+          achievementRate: Math.round(week3AchievementSales * 10) / 10
+        },
+        internal: {
+          goal: week3GoalInternal,
+          current: week3Sales.internalDept,
+          achievementRate: Math.round(week3AchievementInternal * 10) / 10
         }
       } : undefined,
       departmentSales: Object.entries(departmentSales).map(([name, amount]) => ({
