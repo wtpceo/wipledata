@@ -336,6 +336,7 @@ export async function GET(request: NextRequest) {
       console.log('Week 1 goals:', week1GoalSales, week1GoalInternal)
       console.log('Week 2 goals:', week2GoalSales, week2GoalInternal)
       console.log('Week 3 goals:', week3GoalSales, week3GoalInternal)
+      console.log('Week 4 goals:', week4GoalSales, week4GoalInternal)
     } catch (error) {
       console.error('Error reading 목표관리 sheet:', error)
     }
@@ -414,6 +415,8 @@ export async function GET(request: NextRequest) {
     const week2AchievementInternal = week2GoalInternal > 0 ? (week2Sales.internalDept / week2GoalInternal * 100) : 0
     const week3AchievementSales = week3GoalSales > 0 ? (week3Sales.salesDept / week3GoalSales * 100) : 0
     const week3AchievementInternal = week3GoalInternal > 0 ? (week3Sales.internalDept / week3GoalInternal * 100) : 0
+    const week4AchievementSales = week4GoalSales > 0 ? (week4Sales.salesDept / week4GoalSales * 100) : 0
+    const week4AchievementInternal = week4GoalInternal > 0 ? (week4Sales.internalDept / week4GoalInternal * 100) : 0
 
     return NextResponse.json({
       overview: {
@@ -467,6 +470,19 @@ export async function GET(request: NextRequest) {
           goal: week3GoalInternal,
           current: week3Sales.internalDept,
           achievementRate: Math.round(week3AchievementInternal * 10) / 10
+        }
+      } : undefined,
+      // 4주차 목표
+      week4Goals: week4GoalSales > 0 || week4GoalInternal > 0 ? {
+        sales: {
+          goal: week4GoalSales,
+          current: week4Sales.salesDept,
+          achievementRate: Math.round(week4AchievementSales * 10) / 10
+        },
+        internal: {
+          goal: week4GoalInternal,
+          current: week4Sales.internalDept,
+          achievementRate: Math.round(week4AchievementInternal * 10) / 10
         }
       } : undefined,
       departmentSales: Object.entries(departmentSales).map(([name, amount]) => ({
