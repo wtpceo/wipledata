@@ -672,35 +672,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* 최근 활동 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>매출 내역</CardTitle>
-          <CardDescription>{formatMonthDisplay(selectedMonth)} 매출 내역</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {data?.recentSales && data.recentSales.length > 0 ? (
-            <div className="space-y-4">
-              {data.recentSales.map((sale, index) => (
-                <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div>
-                    <p className="font-medium">{sale.clientName}</p>
-                    <p className="text-sm text-muted-foreground">{sale.productName || '제품명 없음'}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(sale.totalAmount)}</p>
-                    <p className="text-sm text-muted-foreground">{sale.date}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              아직 등록된 데이터가 없습니다.
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }
