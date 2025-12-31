@@ -36,6 +36,7 @@ interface DashboardData {
   week2Goals?: WeekGoals
   week3Goals?: WeekGoals
   week4Goals?: WeekGoals
+  week5Goals?: WeekGoals
   departmentSales: { name: string; amount: number }[]
   salesPersonStats: { name: string; amount: number }[]
   productSales: { name: string; amount: number }[]
@@ -533,6 +534,87 @@ export default function DashboardPage() {
                         : "bg-red-600"
                   }`}
                   style={{ width: `${Math.min(100, data.week4Goals.internal.achievementRate)}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 5주차 목표 섹션 */}
+      {data?.week5Goals && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">영업부 5주차 목표 달성률</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                <span className={
+                  data.week5Goals.sales.achievementRate >= 100
+                    ? "text-green-600"
+                    : data.week5Goals.sales.achievementRate >= 80
+                      ? "text-yellow-600"
+                      : "text-red-600"
+                }>
+                  {data.week5Goals.sales.achievementRate}%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                목표: {formatCurrency(data.week5Goals.sales.goal)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                현재: {formatCurrency(data.week5Goals.sales.current)}
+              </p>
+              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${
+                    data.week5Goals.sales.achievementRate >= 100
+                      ? "bg-green-600"
+                      : data.week5Goals.sales.achievementRate >= 80
+                        ? "bg-yellow-600"
+                        : "bg-red-600"
+                  }`}
+                  style={{ width: `${Math.min(100, data.week5Goals.sales.achievementRate)}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">내근직 5주차 목표 달성률</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                <span className={
+                  data.week5Goals.internal.achievementRate >= 100
+                    ? "text-green-600"
+                    : data.week5Goals.internal.achievementRate >= 80
+                      ? "text-yellow-600"
+                      : "text-red-600"
+                }>
+                  {data.week5Goals.internal.achievementRate}%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                목표: {formatCurrency(data.week5Goals.internal.goal)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                현재: {formatCurrency(data.week5Goals.internal.current)}
+              </p>
+              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${
+                    data.week5Goals.internal.achievementRate >= 100
+                      ? "bg-green-600"
+                      : data.week5Goals.internal.achievementRate >= 80
+                        ? "bg-yellow-600"
+                        : "bg-red-600"
+                  }`}
+                  style={{ width: `${Math.min(100, data.week5Goals.internal.achievementRate)}%` }}
                 />
               </div>
             </CardContent>
