@@ -264,7 +264,7 @@ export async function GET(request: NextRequest) {
     const uniqueClients = new Set(currentMonthSales.map(s => s.clientName)).size
 
     // 목표관리 시트에서 해당 월의 목표 읽기
-    let monthlyGoal = 500000000 // 기본값 (목표를 찾을 수 없을 경우)
+    let monthlyGoal = 210000000 // 기본값 2억 1천만원 (목표를 찾을 수 없을 경우)
 
     // 1~5주차 목표 변수
     let week1GoalSales = 0, week1GoalInternal = 0
@@ -273,27 +273,57 @@ export async function GET(request: NextRequest) {
     let week4GoalSales = 0, week4GoalInternal = 0
     let week5GoalSales = 0, week5GoalInternal = 0
 
-    // 주차별 날짜 범위 정의
-    const week1Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01T00:00:00`)
-    const week1End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-07T23:59:59`)
-    const week2Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-08T00:00:00`)
-    const week2End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-14T23:59:59`)
-    const week3Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-15T00:00:00`)
-    const week3End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-21T23:59:59`)
-    const week4Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-22T00:00:00`)
-    const week4End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-28T23:59:59`)
-    const week5Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-29T00:00:00`)
-    const lastDay = new Date(currentYear, currentMonth, 0).getDate()
-    const week5End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-${lastDay}T23:59:59`)
+    // 주차별 날짜 범위 정의 (2026년 1월은 1~4일이 1주차)
+    // 1월의 경우 특별 처리: 1주차 1~4일, 2주차 5~11일, 3주차 12~18일, 4주차 19~25일, 5주차 26~31일
+    const isJanuary2026 = currentYear === 2026 && currentMonth === 1
 
-    // 현재 주차 계산
+    let week1Start, week1End, week2Start, week2End, week3Start, week3End, week4Start, week4End, week5Start, week5End
+
+    if (isJanuary2026) {
+      week1Start = new Date(`${currentYear}-01-01T00:00:00`)
+      week1End = new Date(`${currentYear}-01-04T23:59:59`)
+      week2Start = new Date(`${currentYear}-01-05T00:00:00`)
+      week2End = new Date(`${currentYear}-01-11T23:59:59`)
+      week3Start = new Date(`${currentYear}-01-12T00:00:00`)
+      week3End = new Date(`${currentYear}-01-18T23:59:59`)
+      week4Start = new Date(`${currentYear}-01-19T00:00:00`)
+      week4End = new Date(`${currentYear}-01-25T23:59:59`)
+      week5Start = new Date(`${currentYear}-01-26T00:00:00`)
+      week5End = new Date(`${currentYear}-01-31T23:59:59`)
+    } else {
+      week1Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01T00:00:00`)
+      week1End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-07T23:59:59`)
+      week2Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-08T00:00:00`)
+      week2End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-14T23:59:59`)
+      week3Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-15T00:00:00`)
+      week3End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-21T23:59:59`)
+      week4Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-22T00:00:00`)
+      week4End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-28T23:59:59`)
+      week5Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-29T00:00:00`)
+      const lastDay = new Date(currentYear, currentMonth, 0).getDate()
+      week5End = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-${lastDay}T23:59:59`)
+    }
+
+    // 현재 주차 계산 (2026년 1월은 특별 처리)
     const today = new Date()
     const dayOfMonth = today.getDate()
+    const todayYear = today.getFullYear()
+    const todayMonth = today.getMonth() + 1
     let currentWeek = 1
-    if (dayOfMonth >= 8 && dayOfMonth <= 14) currentWeek = 2
-    else if (dayOfMonth >= 15 && dayOfMonth <= 21) currentWeek = 3
-    else if (dayOfMonth >= 22 && dayOfMonth <= 28) currentWeek = 4
-    else if (dayOfMonth >= 29) currentWeek = 5
+
+    if (todayYear === 2026 && todayMonth === 1) {
+      // 2026년 1월: 1~4일 1주차, 5~11일 2주차, 12~18일 3주차, 19~25일 4주차, 26~31일 5주차
+      if (dayOfMonth >= 5 && dayOfMonth <= 11) currentWeek = 2
+      else if (dayOfMonth >= 12 && dayOfMonth <= 18) currentWeek = 3
+      else if (dayOfMonth >= 19 && dayOfMonth <= 25) currentWeek = 4
+      else if (dayOfMonth >= 26) currentWeek = 5
+    } else {
+      // 기본: 1~7일 1주차, 8~14일 2주차, ...
+      if (dayOfMonth >= 8 && dayOfMonth <= 14) currentWeek = 2
+      else if (dayOfMonth >= 15 && dayOfMonth <= 21) currentWeek = 3
+      else if (dayOfMonth >= 22 && dayOfMonth <= 28) currentWeek = 4
+      else if (dayOfMonth >= 29) currentWeek = 5
+    }
 
     console.log(`Current week: ${currentWeek}`)
 
@@ -307,35 +337,35 @@ export async function GET(request: NextRequest) {
 
       if (goalRow && goalRow[1]) {
         const goalString = String(goalRow[1]).replace(/[₩,]/g, '').replace(/원/g, '')
-        monthlyGoal = parseFloat(goalString) || 500000000
+        monthlyGoal = parseFloat(goalString) || 210000000
       }
 
-      // 1~5주차 목표 모두 읽기 (L3:M7)
-      const allWeekGoalsData = await readFromSheet('목표관리!L3:M7')
+      // 1~5주차 목표 모두 읽기 (O3:P7)
+      const allWeekGoalsData = await readFromSheet('목표관리!O3:P7')
       console.log('All week goals data:', allWeekGoalsData)
 
       if (allWeekGoalsData && allWeekGoalsData.length > 0) {
-        // 1주차 (L3:M3)
+        // 1주차 (O3:P3)
         if (allWeekGoalsData[0]) {
           week1GoalSales = parseFloat(String(allWeekGoalsData[0][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week1GoalInternal = parseFloat(String(allWeekGoalsData[0][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 2주차 (L4:M4)
+        // 2주차 (O4:P4)
         if (allWeekGoalsData[1]) {
           week2GoalSales = parseFloat(String(allWeekGoalsData[1][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week2GoalInternal = parseFloat(String(allWeekGoalsData[1][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 3주차 (L5:M5)
+        // 3주차 (O5:P5)
         if (allWeekGoalsData[2]) {
           week3GoalSales = parseFloat(String(allWeekGoalsData[2][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week3GoalInternal = parseFloat(String(allWeekGoalsData[2][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 4주차 (L6:M6)
+        // 4주차 (O6:P6)
         if (allWeekGoalsData[3]) {
           week4GoalSales = parseFloat(String(allWeekGoalsData[3][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week4GoalInternal = parseFloat(String(allWeekGoalsData[3][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 5주차 (L7:M7)
+        // 5주차 (O7:P7)
         if (allWeekGoalsData[4]) {
           week5GoalSales = parseFloat(String(allWeekGoalsData[4][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week5GoalInternal = parseFloat(String(allWeekGoalsData[4][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
