@@ -316,10 +316,10 @@ export async function GET(request: NextRequest) {
       week2Start = new Date(`${currentYear}-01-05T00:00:00`)
       week2End = new Date(`${currentYear}-01-11T23:59:59`)
       week3Start = new Date(`${currentYear}-01-12T00:00:00`)
-      week3End = new Date(`${currentYear}-01-18T23:59:59`)
-      week4Start = new Date(`${currentYear}-01-19T00:00:00`)
-      week4End = new Date(`${currentYear}-01-25T23:59:59`)
-      week5Start = new Date(`${currentYear}-01-26T00:00:00`)
+      week3End = new Date(`${currentYear}-01-17T23:59:59`)
+      week4Start = new Date(`${currentYear}-01-18T00:00:00`)
+      week4End = new Date(`${currentYear}-01-24T23:59:59`)
+      week5Start = new Date(`${currentYear}-01-25T00:00:00`)
       week5End = new Date(`${currentYear}-01-31T23:59:59`)
     } else {
       week1Start = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01T00:00:00`)
@@ -343,11 +343,11 @@ export async function GET(request: NextRequest) {
     let currentWeek = 1
 
     if (todayYear === 2026 && todayMonth === 1) {
-      // 2026년 1월: 1~4일 1주차, 5~11일 2주차, 12~18일 3주차, 19~25일 4주차, 26~31일 5주차
+      // 2026년 1월: 1~4일 1주차, 5~11일 2주차, 12~17일 3주차, 18~24일 4주차, 25~31일 5주차
       if (dayOfMonth >= 5 && dayOfMonth <= 11) currentWeek = 2
-      else if (dayOfMonth >= 12 && dayOfMonth <= 18) currentWeek = 3
-      else if (dayOfMonth >= 19 && dayOfMonth <= 25) currentWeek = 4
-      else if (dayOfMonth >= 26) currentWeek = 5
+      else if (dayOfMonth >= 12 && dayOfMonth <= 17) currentWeek = 3
+      else if (dayOfMonth >= 18 && dayOfMonth <= 24) currentWeek = 4
+      else if (dayOfMonth >= 25) currentWeek = 5
     } else {
       // 기본: 1~7일 1주차, 8~14일 2주차, ...
       if (dayOfMonth >= 8 && dayOfMonth <= 14) currentWeek = 2
@@ -375,34 +375,34 @@ export async function GET(request: NextRequest) {
       const { salesCol, internalCol } = getWeekGoalsColumns(currentYear, currentMonth)
       console.log(`Week goals columns for ${currentYear}-${currentMonth}: ${salesCol}:${internalCol}`)
 
-      // 1~5주차 목표 모두 읽기 (해당 월의 열에서, 4~8행)
-      const weekGoalsRange = `목표관리!${salesCol}4:${internalCol}8`
+      // 1~5주차 목표 모두 읽기 (해당 월의 열에서, 3~7행)
+      const weekGoalsRange = `목표관리!${salesCol}3:${internalCol}7`
       console.log('Reading week goals from:', weekGoalsRange)
       const allWeekGoalsData = await readFromSheet(weekGoalsRange)
       console.log('All week goals data:', allWeekGoalsData)
 
       if (allWeekGoalsData && allWeekGoalsData.length > 0) {
-        // 1주차 (4행)
+        // 1주차 (3행)
         if (allWeekGoalsData[0]) {
           week1GoalSales = parseFloat(String(allWeekGoalsData[0][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week1GoalInternal = parseFloat(String(allWeekGoalsData[0][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 2주차 (5행)
+        // 2주차 (4행)
         if (allWeekGoalsData[1]) {
           week2GoalSales = parseFloat(String(allWeekGoalsData[1][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week2GoalInternal = parseFloat(String(allWeekGoalsData[1][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 3주차 (6행)
+        // 3주차 (5행)
         if (allWeekGoalsData[2]) {
           week3GoalSales = parseFloat(String(allWeekGoalsData[2][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week3GoalInternal = parseFloat(String(allWeekGoalsData[2][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 4주차 (7행)
+        // 4주차 (6행)
         if (allWeekGoalsData[3]) {
           week4GoalSales = parseFloat(String(allWeekGoalsData[3][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week4GoalInternal = parseFloat(String(allWeekGoalsData[3][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 5주차 (8행)
+        // 5주차 (7행)
         if (allWeekGoalsData[4]) {
           week5GoalSales = parseFloat(String(allWeekGoalsData[4][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week5GoalInternal = parseFloat(String(allWeekGoalsData[4][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
@@ -541,17 +541,17 @@ export async function GET(request: NextRequest) {
           achievementRate: Math.round(week2AchievementInternal * 10) / 10
         }
       } : undefined,
-      // 3주차 목표
-      week3Goals: week3GoalSales > 0 || week3GoalInternal > 0 ? {
+      // 3주차 목표 (목표가 0이어도 현재 주차가 3 이상이면 표시)
+      week3Goals: (week3GoalSales > 0 || week3GoalInternal > 0 || currentWeek >= 3) ? {
         sales: {
           goal: week3GoalSales,
           current: week3Sales.salesDept,
-          achievementRate: Math.round(week3AchievementSales * 10) / 10
+          achievementRate: week3GoalSales > 0 ? Math.round(week3AchievementSales * 10) / 10 : 0
         },
         internal: {
           goal: week3GoalInternal,
           current: week3Sales.internalDept,
-          achievementRate: Math.round(week3AchievementInternal * 10) / 10
+          achievementRate: week3GoalInternal > 0 ? Math.round(week3AchievementInternal * 10) / 10 : 0
         }
       } : undefined,
       // 4주차 목표
