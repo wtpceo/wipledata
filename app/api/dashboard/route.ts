@@ -1,6 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFromSheet, SHEETS } from '@/lib/google-sheets'
 
+// 열 번호를 문자로 변환 (1=A, 2=B, ..., 26=Z, 27=AA)
+function getColumnLetter(colNum: number): string {
+  let letter = ''
+  while (colNum > 0) {
+    const remainder = (colNum - 1) % 26
+    letter = String.fromCharCode(65 + remainder) + letter
+    colNum = Math.floor((colNum - 1) / 26)
+  }
+  return letter
+}
+
+// 월별 주차 목표 열 계산 (12월=L:M, 1월=O:P, ...)
+function getWeekGoalsColumns(year: number, month: number): { salesCol: string; internalCol: string } {
+  // 기준: 2025년 12월 = L열 (12번째)
+  const baseYear = 2025
+  const baseMonth = 12
+  const baseColumn = 12 // L열
+
+  // 기준점에서 몇 개월 차이나는지 계산
+  const monthDiff = (year - baseYear) * 12 + (month - baseMonth)
+
+  // 영업부 열 번호 계산 (3열씩 이동)
+  const salesColumn = baseColumn + (monthDiff * 3)
+  const internalColumn = salesColumn + 1
+
+  return {
+    salesCol: getColumnLetter(salesColumn),
+    internalCol: getColumnLetter(internalColumn)
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     // TODO: Enable authentication once auth is properly configured
@@ -340,32 +371,38 @@ export async function GET(request: NextRequest) {
         monthlyGoal = parseFloat(goalString) || 210000000
       }
 
-      // 1~5주차 목표 모두 읽기 (O3:P7)
-      const allWeekGoalsData = await readFromSheet('목표관리!O3:P7')
+      // 월별 주차 목표 열 계산
+      const { salesCol, internalCol } = getWeekGoalsColumns(currentYear, currentMonth)
+      console.log(`Week goals columns for ${currentYear}-${currentMonth}: ${salesCol}:${internalCol}`)
+
+      // 1~5주차 목표 모두 읽기 (해당 월의 열에서, 4~8행)
+      const weekGoalsRange = `목표관리!${salesCol}4:${internalCol}8`
+      console.log('Reading week goals from:', weekGoalsRange)
+      const allWeekGoalsData = await readFromSheet(weekGoalsRange)
       console.log('All week goals data:', allWeekGoalsData)
 
       if (allWeekGoalsData && allWeekGoalsData.length > 0) {
-        // 1주차 (O3:P3)
+        // 1주차 (4행)
         if (allWeekGoalsData[0]) {
           week1GoalSales = parseFloat(String(allWeekGoalsData[0][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week1GoalInternal = parseFloat(String(allWeekGoalsData[0][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 2주차 (O4:P4)
+        // 2주차 (5행)
         if (allWeekGoalsData[1]) {
           week2GoalSales = parseFloat(String(allWeekGoalsData[1][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week2GoalInternal = parseFloat(String(allWeekGoalsData[1][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 3주차 (O5:P5)
+        // 3주차 (6행)
         if (allWeekGoalsData[2]) {
           week3GoalSales = parseFloat(String(allWeekGoalsData[2][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week3GoalInternal = parseFloat(String(allWeekGoalsData[2][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 4주차 (O6:P6)
+        // 4주차 (7행)
         if (allWeekGoalsData[3]) {
           week4GoalSales = parseFloat(String(allWeekGoalsData[3][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week4GoalInternal = parseFloat(String(allWeekGoalsData[3][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
         }
-        // 5주차 (O7:P7)
+        // 5주차 (8행)
         if (allWeekGoalsData[4]) {
           week5GoalSales = parseFloat(String(allWeekGoalsData[4][0] || '0').replace(/[₩,원]/g, '').trim()) || 0
           week5GoalInternal = parseFloat(String(allWeekGoalsData[4][1] || '0').replace(/[₩,원]/g, '').trim()) || 0
