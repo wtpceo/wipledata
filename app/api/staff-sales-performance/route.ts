@@ -9,10 +9,6 @@ export async function GET(request: NextRequest) {
     const department = searchParams.get('department')
 
     // 원본데이터 시트에서 데이터 읽기
-    // A: 타임스탬프, B: 부서, C: 입력자(담당자), D: 매출 유형, E: 광고주명,
-    // F: 상품명, G: 계약개월, H: 총계약금액, I: 결제방식, J: 승인번호,
-    // K: 외주비, L: 상담내용, M: 특이사항, N: 계약서, O: 계약날짜, P: 계약종료일,
-    // Q: 월평균금액, R: 순수익, S: 입력년월, T: 분기
     const data = await readFromSheet('원본데이터!A2:T')
 
     // 데이터 파싱
@@ -109,12 +105,14 @@ export async function GET(request: NextRequest) {
           totalSales: 0,
           totalNetProfit: 0,
           totalContracts: 0,
-          salesByType: {} as { [key: string]: {
-            count: number
-            totalAmount: number
-            netProfit: number
-            clients: string[]
-          }}
+          salesByType: {} as {
+            [key: string]: {
+              count: number
+              totalAmount: number
+              netProfit: number
+              clients: string[]
+            }
+          }
         }
       }
 
