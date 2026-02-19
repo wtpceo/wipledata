@@ -18,6 +18,11 @@ interface WeekGoals {
   }
 }
 
+interface WeeklyStatEntry {
+  week: number
+  stats: { name: string; amount: number }[]
+}
+
 interface DashboardData {
   overview: {
     currentMonthTotal: number
@@ -41,6 +46,8 @@ interface DashboardData {
   salesPersonStats: { name: string; amount: number }[]
   productSales: { name: string; amount: number }[]
   inputPersonStats: { name: string; amount: number }[]
+  weeklyInputPersonStats?: WeeklyStatEntry[]
+  weeklyDepartmentStats?: WeeklyStatEntry[]
   monthlyTrend: { month: string; amount: number }[]
   recentSales: any[]
 }
@@ -54,6 +61,8 @@ export default function DashboardPage() {
   const [showAllProducts, setShowAllProducts] = useState(false)
   const [showAllInputPerson, setShowAllInputPerson] = useState(false)
   const [showAllDepartments, setShowAllDepartments] = useState(false)
+  const [inputPersonWeek, setInputPersonWeek] = useState<number>(0) // 0 = 월별
+  const [departmentWeek, setDepartmentWeek] = useState<number>(0) // 0 = 월별
 
   useEffect(() => {
     fetchDashboardData(selectedMonth)
@@ -82,10 +91,12 @@ export default function DashboardPage() {
       date.setMonth(date.getMonth() + 1)
     }
     setSelectedMonth(date.toISOString().substring(0, 7))
-    // 월 변경 시 더보기 상태 초기화
+    // 월 변경 시 더보기/주차 상태 초기화
     setShowAllProducts(false)
     setShowAllInputPerson(false)
     setShowAllDepartments(false)
+    setInputPersonWeek(0)
+    setDepartmentWeek(0)
   }
 
   const formatMonthDisplay = (month: string) => {
@@ -662,40 +673,71 @@ export default function DashboardPage() {
             <CardDescription>{formatMonthDisplay(selectedMonth)} 입력자별 매출 현황</CardDescription>
           </CardHeader>
           <CardContent>
-            {data?.inputPersonStats && data.inputPersonStats.length > 0 ? (
-              <div className="space-y-3">
-                {(showAllInputPerson ? data.inputPersonStats : data.inputPersonStats.slice(0, 5)).map((person, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-sm font-medium">{person.name}</span>
+            {/* 주차 탭 */}
+            <div className="flex flex-wrap gap-1 mb-3">
+              {[
+                { label: '월별', value: 0 },
+                { label: '1주', value: 1 },
+                { label: '2주', value: 2 },
+                { label: '3주', value: 3 },
+                { label: '4주', value: 4 },
+                { label: '5주', value: 5 },
+              ].filter(tab => {
+                if (tab.value === 0) return true
+                const weekStats = data?.weeklyInputPersonStats?.find(w => w.week === tab.value)
+                return weekStats && weekStats.stats.length > 0
+              }).map(tab => (
+                <button
+                  key={tab.value}
+                  onClick={() => { setInputPersonWeek(tab.value); setShowAllInputPerson(false) }}
+                  className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                    inputPersonWeek === tab.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {(() => {
+              const list = inputPersonWeek === 0
+                ? data?.inputPersonStats ?? []
+                : data?.weeklyInputPersonStats?.find(w => w.week === inputPersonWeek)?.stats ?? []
+              const total = list.reduce((s, p) => s + p.amount, 0)
+              return list.length > 0 ? (
+                <div className="space-y-3">
+                  {(showAllInputPerson ? list : list.slice(0, 5)).map((person, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="text-sm font-medium">{person.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{formatCurrency(person.amount)}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({total > 0 ? Math.round(person.amount / total * 100) : 0}%)
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">
-                        {formatCurrency(person.amount)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        ({Math.round(person.amount / data.overview.currentMonthTotal * 100)}%)
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {data.inputPersonStats.length > 5 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => setShowAllInputPerson(!showAllInputPerson)}
-                  >
-                    {showAllInputPerson ? '접기' : `+${data.inputPersonStats.length - 5}명 더 보기`}
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                입력자별 실적 데이터가 없습니다
-              </div>
-            )}
+                  ))}
+                  {list.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => setShowAllInputPerson(!showAllInputPerson)}
+                    >
+                      {showAllInputPerson ? '접기' : `+${list.length - 5}명 더 보기`}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                  입력자별 실적 데이터가 없습니다
+                </div>
+              )
+            })()}
           </CardContent>
         </Card>
 
@@ -705,40 +747,71 @@ export default function DashboardPage() {
             <CardDescription>{formatMonthDisplay(selectedMonth)} 부서별 매출 현황</CardDescription>
           </CardHeader>
           <CardContent>
-            {data?.departmentSales && data.departmentSales.length > 0 ? (
-              <div className="space-y-3">
-                {(showAllDepartments ? data.departmentSales : data.departmentSales.slice(0, 5)).map((dept, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-sm font-medium">{dept.name}</span>
+            {/* 주차 탭 */}
+            <div className="flex flex-wrap gap-1 mb-3">
+              {[
+                { label: '월별', value: 0 },
+                { label: '1주', value: 1 },
+                { label: '2주', value: 2 },
+                { label: '3주', value: 3 },
+                { label: '4주', value: 4 },
+                { label: '5주', value: 5 },
+              ].filter(tab => {
+                if (tab.value === 0) return true
+                const weekStats = data?.weeklyDepartmentStats?.find(w => w.week === tab.value)
+                return weekStats && weekStats.stats.length > 0
+              }).map(tab => (
+                <button
+                  key={tab.value}
+                  onClick={() => { setDepartmentWeek(tab.value); setShowAllDepartments(false) }}
+                  className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                    departmentWeek === tab.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {(() => {
+              const list = departmentWeek === 0
+                ? data?.departmentSales ?? []
+                : data?.weeklyDepartmentStats?.find(w => w.week === departmentWeek)?.stats ?? []
+              const total = list.reduce((s, d) => s + d.amount, 0)
+              return list.length > 0 ? (
+                <div className="space-y-3">
+                  {(showAllDepartments ? list : list.slice(0, 5)).map((dept, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="text-sm font-medium">{dept.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{formatCurrency(dept.amount)}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({total > 0 ? Math.round(dept.amount / total * 100) : 0}%)
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">
-                        {formatCurrency(dept.amount)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        ({Math.round(dept.amount / data.overview.currentMonthTotal * 100)}%)
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {data.departmentSales.length > 5 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => setShowAllDepartments(!showAllDepartments)}
-                  >
-                    {showAllDepartments ? '접기' : `+${data.departmentSales.length - 5}개 더 보기`}
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                부서별 매출 데이터가 없습니다
-              </div>
-            )}
+                  ))}
+                  {list.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => setShowAllDepartments(!showAllDepartments)}
+                    >
+                      {showAllDepartments ? '접기' : `+${list.length - 5}개 더 보기`}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                  부서별 매출 데이터가 없습니다
+                </div>
+              )
+            })()}
           </CardContent>
         </Card>
       </div>

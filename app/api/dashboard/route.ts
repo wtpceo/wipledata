@@ -482,6 +482,82 @@ export async function GET(request: NextRequest) {
     const week4Sales = calculateWeekSales(week4Start, week4End)
     const week5Sales = calculateWeekSales(week5Start, week5End)
 
+    // 주차별 입력자/부서 실적 계산
+    // currentMonthSales 기반: 영업부는 O열(계약일), 내근직은 A열(timestamp) 기준으로 주차 배분
+    const getWeekForSale = (sale: any): number => {
+      let saleDate: Date | null = null
+      if (sale.department === '영업부') {
+        const contractDate = sale.rawRow?.[14]
+        if (!contractDate) return 0
+        try {
+          if (contractDate.includes('/')) {
+            const parts = contractDate.split('/')
+            if (parts.length === 3) {
+              const [m, d, y] = parts
+              saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+            }
+          } else if (contractDate.includes('.')) {
+            saleDate = new Date(contractDate.replace(/\./g, '-'))
+          } else if (contractDate.includes('-')) {
+            saleDate = new Date(contractDate)
+          }
+        } catch {}
+      } else {
+        const timestamp = sale.date
+        if (!timestamp) return 0
+        try {
+          if (timestamp.includes('T')) {
+            saleDate = new Date(timestamp)
+          } else if (timestamp.includes('/')) {
+            const parts = timestamp.split('/')
+            if (parts.length === 3) {
+              const [m, d, y] = parts
+              saleDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+            }
+          } else if (timestamp.includes('.')) {
+            saleDate = new Date(timestamp.replace(/\./g, '-'))
+          } else if (timestamp.includes('-')) {
+            saleDate = new Date(timestamp)
+          }
+        } catch {}
+      }
+      if (!saleDate || isNaN(saleDate.getTime())) return 0
+      if (saleDate >= week1Start && saleDate <= week1End) return 1
+      if (saleDate >= week2Start && saleDate <= week2End) return 2
+      if (saleDate >= week3Start && saleDate <= week3End) return 3
+      if (saleDate >= week4Start && saleDate <= week4End) return 4
+      if (saleDate >= week5Start && saleDate <= week5End) return 5
+      return 0
+    }
+
+    const weeklyPersonMaps: { [week: number]: { [name: string]: number } } = { 1: {}, 2: {}, 3: {}, 4: {}, 5: {} }
+    const weeklyDeptMaps: { [week: number]: { [name: string]: number } } = { 1: {}, 2: {}, 3: {}, 4: {}, 5: {} }
+
+    currentMonthSales.forEach(sale => {
+      const week = getWeekForSale(sale)
+      if (week === 0) return
+      if (sale.inputPerson) {
+        weeklyPersonMaps[week][sale.inputPerson] = (weeklyPersonMaps[week][sale.inputPerson] || 0) + sale.totalAmount
+      }
+      if (sale.department) {
+        const deptName = sale.department === '영업부' ? '영업부' : '내근직'
+        weeklyDeptMaps[week][deptName] = (weeklyDeptMaps[week][deptName] || 0) + sale.totalAmount
+      }
+    })
+
+    const weeklyInputPersonStats = [1, 2, 3, 4, 5].map(week => ({
+      week,
+      stats: Object.entries(weeklyPersonMaps[week])
+        .map(([name, amount]) => ({ name, amount }))
+        .sort((a, b) => b.amount - a.amount)
+    }))
+
+    const weeklyDepartmentStats = [1, 2, 3, 4, 5].map(week => ({
+      week,
+      stats: Object.entries(weeklyDeptMaps[week])
+        .map(([name, amount]) => ({ name, amount }))
+    }))
+
     console.log('Week 1 sales:', week1Sales)
     console.log('Week 2 sales:', week2Sales)
     console.log('Week 3 sales:', week3Sales)
@@ -602,6 +678,8 @@ export async function GET(request: NextRequest) {
           amount
         }))
         .sort((a, b) => b.amount - a.amount),
+      weeklyInputPersonStats,
+      weeklyDepartmentStats,
       monthlyTrend,
       recentSales: currentMonthSales.slice(0, 10).map((sale, index) => ({
         id: `recent-${index}`,
