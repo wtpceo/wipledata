@@ -51,7 +51,7 @@ interface PerformanceData {
 export default function StaffPerformancePage() {
   const [data, setData] = useState<PerformanceData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState('2025-11')
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7))
   const [expandedTypes, setExpandedTypes] = useState<string[]>([])
 
   useEffect(() => {
