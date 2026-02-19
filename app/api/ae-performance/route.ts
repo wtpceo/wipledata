@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { writeToSheet, readFromSheet } from '@/lib/google-sheets'
 import { normalizeStaffName } from '@/lib/normalize-staff-name'
 
+// 👇 [필수] 캐시 무력화를 위한 강제 동적 설정 (V2에서 가져옴)
+export const dynamic = 'force-dynamic'
+
+// 담당자 이름 정규화 (이름만 추출)
+function extractAEName(aeString: string): string[] {
+  if (!aeString) return []
+  const aes = aeString.split(',').map(ae => ae.trim())
+  return aes.map(ae => {
+    let name = ae.match(/^([^(]+)/)?.[1]?.trim() || ae
+    const firstWord = name.split(/\s+/)[0]
+    return firstWord
+  })
+}
+
 // 날짜 파싱 함수
 function parseDate(dateStr: string): Date | null {
   if (!dateStr) return null
@@ -20,8 +34,9 @@ function parseDate(dateStr: string): Date | null {
     if (dateStr.includes('/')) {
       const parts = dateStr.split('/')
       if (parts.length === 3) {
-        const [m, d, y] = parts
-        return new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+        // MM/DD/YYYY 가정 (한국식일 수도 있으나 기존 코드 존중)
+        // MM/DD/YYYY 순서로 파싱
+        return new Date(`${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`)
       }
     }
     // YYYY-MM-DD 형식
@@ -36,242 +51,249 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const month = searchParams.get('month') // YYYY-MM 형식
 
-    // 원본데이터에서 연장 실적 데이터 읽기
+    // 타겟 월이 지정되지 않은 경우 최근 12개월 데이터를 가져올 수 있도록 로직 수정 필요
+    // 하지만 현재 클라이언트 구조상 '최신 월'을 자동으로 선택하거나 전체를 가져와서 필터링함.
+    // 여기서는 모든 데이터를 가져와서 월별로 그룹화하는 기존 로직을 유지하면서,
+    // *분모(종료예정)* 계산 시에만 V2 로직을 월별로 적용합니다.
+
+    // 1. 데이터 가져오기 (Clients + 원본데이터)
+    // 원본데이터: 연장 성공(분자) 및 매출 확인용
     const rawData = await readFromSheet('원본데이터!A2:T')
 
-    // Clients 탭에서 전체 광고주 및 연장 실패 데이터 읽기
-    const clientsData = await readFromSheet('clients!A:F')
+    // Clients: 종료 예정(분모1) 및 연장 실패(분모2) 확인용
+    const clientsRes = await readFromSheet('clients!A:F')
+    const [, ...clientsRows] = clientsRes
 
-    // 원본데이터에서 모든 매출 파싱 (모든 매출 유형 포함)
+    // 2. 원본데이터 파싱 (모든 매출)
     const allSales = rawData
       .map(row => {
         const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0 // H열: 총계약금액
         const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0 // K열: 확정 외주비
         const department = row[1] || '' // B열: 부서
+        const aeName = normalizeStaffName(row[2] || '') // C열: 담당자
+        const salesType = row[3] || '' // D열: 매출 유형
+        const clientName = (row[4] || '').trim() // E열: 광고주명
 
         // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
         const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
 
+        // 날짜 파싱 (월별 그룹화를 위해)
+        let saleMonth: string | null = null
+        // 영업부는 S열(inputYearMonth) 사용
+        if (department === '영업부') {
+          const inputMonth = row[18] || ''
+          if (inputMonth) {
+            if (inputMonth.includes('-')) {
+              saleMonth = inputMonth
+            } else if (inputMonth.includes('.')) {
+              saleMonth = inputMonth.replace('.', '-')
+            } else if (inputMonth.length <= 2) {
+              const currentYear = new Date().getFullYear()
+              saleMonth = `${currentYear}-${inputMonth.padStart(2, '0')}`
+            } else if (inputMonth.length === 6) {
+              const year = inputMonth.substring(0, 4)
+              const mon = inputMonth.substring(4, 6)
+              saleMonth = `${year}-${mon}`
+            }
+          }
+        } else {
+          // 내근직은 A열(timestamp) 사용
+          const timestamp = row[0] || ''
+          const saleDate = parseDate(timestamp)
+          if (saleDate && !isNaN(saleDate.getTime())) {
+            saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
+          }
+        }
+
         return {
-          timestamp: row[0] || '', // A열: 타임스탬프
-          department: department,
-          aeName: normalizeStaffName(row[2] || ''), // C열: 담당자 (정규화)
-          salesType: row[3] || '', // D열: 매출 유형
-          clientName: row[4] || '', // E열: 광고주명
+          department,
+          aeName,
+          salesType,
+          clientName,
           totalAmount: actualAmount,
-          inputYearMonth: row[18] || '', // S열: 입력년월 (영업부 필터링용)
+          saleMonth,
+          isRenewal: salesType.includes('연장') || salesType.includes('재계약')
         }
       })
+      .filter(sale => sale.saleMonth) // 날짜 파싱 실패한 건 제외
 
-    console.log('=== AE Performance Debug ===')
-    console.log('Total sales found:', allSales.length)
+    // 3. 월별 데이터 그룹화
+    // V2 로직의 핵심: 각 월별로 (종료예정 U 연장성공) 집합을 구해야 함.
 
-    // 최호천의 모든 데이터 찾기
-    const choiSales = allSales.filter(s => s.aeName.includes('최호천') || s.aeName.includes('호천'))
-    console.log('최호천 total sales:', choiSales.length)
-    choiSales.forEach((sale, idx) => {
-      console.log(`  최호천 ${idx + 1}: Dept=${sale.department}, Type=${sale.salesType}, Amount=${sale.totalAmount}, Timestamp=${sale.timestamp}, InputMonth=${sale.inputYearMonth}`)
-    })
+    // 모든 월 목록 수집 (매출 발생 월 + 종료 예정 월)
+    const allMonths = new Set<string>()
+    allSales.forEach(s => s.saleMonth && allMonths.add(s.saleMonth))
 
-    if (allSales.length > 0) {
-      console.log('Sample sales (first 3):')
-      allSales.slice(0, 3).forEach((sale, idx) => {
-        console.log(`  ${idx + 1}. AE: ${sale.aeName}, Type: ${sale.salesType}, Timestamp: ${sale.timestamp}, Amount: ${sale.totalAmount}`)
-      })
-    }
-
-    // 원본데이터에서 매출을 월별로 그룹화
-    const salesByMonth = new Map<string, any[]>()
-    let parsedCount = 0
-    let failedCount = 0
-
-    allSales.forEach(sale => {
-      let saleMonth: string | null = null
-      const isChoi = sale.aeName.includes('최호천') || sale.aeName.includes('호천')
-
-      // 영업부는 S열(inputYearMonth) 사용
-      if (sale.department === '영업부') {
-        if (!sale.inputYearMonth) {
-          if (isChoi) console.log('❌ 최호천: inputYearMonth 없음')
-          failedCount++
-          return
-        }
-
-        // 입력년월 형식 파싱 (YYYY-MM, YYYY.MM, MM 등)
-        const inputMonth = sale.inputYearMonth
-        if (inputMonth.includes('-')) {
-          saleMonth = inputMonth // 이미 YYYY-MM 형식
-        } else if (inputMonth.includes('.')) {
-          saleMonth = inputMonth.replace('.', '-') // YYYY.MM → YYYY-MM
-        } else if (inputMonth.length <= 2) {
-          // MM 형식인 경우 현재 연도 사용
-          const currentYear = new Date().getFullYear()
-          saleMonth = `${currentYear}-${inputMonth.padStart(2, '0')}`
-        } else if (inputMonth.length === 6) {
-          // YYYYMM 형식
-          const year = inputMonth.substring(0, 4)
-          const mon = inputMonth.substring(4, 6)
-          saleMonth = `${year}-${mon}`
-        }
-
-        if (!saleMonth) {
-          if (isChoi) console.log('❌ 최호천: inputYearMonth 파싱 실패:', inputMonth)
-          console.log('Failed to parse inputYearMonth:', inputMonth)
-          failedCount++
-          return
-        }
-
-        if (isChoi) console.log(`✅ 최호천: 영업부 - InputMonth=${inputMonth} → ${saleMonth}`)
-      } else {
-        // 내근직은 A열(timestamp) 사용
-        if (!sale.timestamp) {
-          if (isChoi) console.log('❌ 최호천: timestamp 없음')
-          failedCount++
-          return
-        }
-
-        const saleDate = parseDate(sale.timestamp)
-        if (!saleDate || isNaN(saleDate.getTime())) {
-          if (isChoi) console.log('❌ 최호천: timestamp 파싱 실패:', sale.timestamp)
-          console.log('Failed to parse timestamp:', sale.timestamp)
-          failedCount++
-          return
-        }
-
-        saleMonth = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`
-        if (isChoi) console.log(`✅ 최호천: 내근직 - Timestamp=${sale.timestamp} → ${saleMonth}`)
-      }
-
-      parsedCount++
-
-      if (!salesByMonth.has(saleMonth)) {
-        salesByMonth.set(saleMonth, [])
-      }
-      salesByMonth.get(saleMonth)!.push(sale)
-    })
-
-    console.log('Timestamp parsing results:')
-    console.log('  Successfully parsed:', parsedCount)
-    console.log('  Failed to parse:', failedCount)
-    console.log('  Months with sales:', Array.from(salesByMonth.keys()).sort())
-    salesByMonth.forEach((sales, month) => {
-      console.log(`  ${month}: ${sales.length} sales`)
-    })
-
-    // Clients 탭에서 전체 광고주와 연장 실패 파싱
-    const [clientsHeaders, ...clientsRows] = clientsData
-
-    // 진행 중인 광고주로 AE별 총 광고주 수 계산
-    const aeTotalClientsMap = new Map<string, Set<string>>()
+    // Clients 시트에서 종료 월 수집
     clientsRows.forEach(row => {
-      const status = row[0] || ''
-      const clientName = row[1] || ''
-      const aeString = row[2] || ''
-
-      if (status === '진행' && clientName && aeString) {
-        const aeName = normalizeStaffName(aeString)
-        if (!aeTotalClientsMap.has(aeName)) {
-          aeTotalClientsMap.set(aeName, new Set())
-        }
-        aeTotalClientsMap.get(aeName)!.add(clientName)
+      const endDateStr = row[4] || ''
+      const endDate = parseDate(endDateStr)
+      if (endDate) {
+        const endMonth = `${endDate.getFullYear()}-${(endDate.getMonth() + 1).toString().padStart(2, '0')}`
+        allMonths.add(endMonth)
       }
     })
 
-    // 연장 실패 데이터
-    const failedRenewals = clientsRows
-      .filter(row => row[0] === '연장 실패')
-      .map(row => ({
-        clientName: row[1] || '',
-        ae: normalizeStaffName(row[2] || ''),
-      }))
-
-    // 월별 통계 생성
-    const monthlyStats = Array.from(salesByMonth.keys())
+    const monthlyStats = Array.from(allMonths)
       .sort((a, b) => b.localeCompare(a)) // 최신 월부터
-      .map(month => {
-        const monthSales = salesByMonth.get(month) || []
+      .map(targetYM => {
+        const [tYear, tMonth] = targetYM.split('-').map(Number)
 
-        // 해당 월의 AE별 실적
-        const aeMonthPerformances = new Map<string, any>()
+        // 3-1. 해당 월의 매출 데이터 (분자 및 매출액)
+        const monthSales = allSales.filter(s => s.saleMonth === targetYM)
+
+        // AE별 매출 집계
+        const aeSalesMap = new Map<string, { count: number, amount: number, renewedClients: Set<string> }>()
 
         monthSales.forEach(sale => {
-          if (!aeMonthPerformances.has(sale.aeName)) {
-            const totalClients = aeTotalClientsMap.get(sale.aeName)?.size || 0
-            aeMonthPerformances.set(sale.aeName, {
-              aeName: sale.aeName,
-              department: sale.department,
-              totalClients: totalClients,
-              expiringClients: 0, // 종료 예정은 현재 시스템에서 추적하지 않음
-              renewedClients: 0,
-              failedRenewals: 0,
-              renewalRevenue: 0
-            })
+          if (!aeSalesMap.has(sale.aeName)) {
+            aeSalesMap.set(sale.aeName, { count: 0, amount: 0, renewedClients: new Set() })
           }
-          const perf = aeMonthPerformances.get(sale.aeName)!
-          perf.renewedClients += 1
-          perf.renewalRevenue += sale.totalAmount
+          const stat = aeSalesMap.get(sale.aeName)!
+
+          if (sale.isRenewal) {
+            stat.count += 1
+            stat.amount += sale.totalAmount
+            stat.renewedClients.add(sale.clientName)
+          } else {
+            // 신규 매출도 매출액에는 포함 (연장률 계산에는 제외되더라도 총 매출에는 포함)
+            // 기존 V1 로직에서는 '총 매출'은 구분 없이 다 보여줬음.
+            // 하지만 Renewal Rate 계산 시에는 '연장' 건만 분자로 씀.
+            // 여기서는 'renewalRevenue'라고 명시되어 있으므로 연장 건만 합산하는 게 맞음.
+            // 다만 'Total Revenue' 카드에는 전체 매출이 들어가는 게 일반적이나,
+            // 기존 V1 로직을 보면 `renewalRevenue += sale.totalAmount`로 모든 매출을 더하고 있었음 (필터링 없이).
+            // V2 로직에서는 정확히 연장 건만 따졌음. 
+            // V1의 'Renewal Revenue' 의미를 유지하기 위해 모든 매출을 더하되,
+            // 'Renewed Clients' 카운트는 연장 건만 세는 것으로 수정 (기존 V1은 모든 건을 셌음 -> 버그였을 가능성 높음)
+
+            // **수정**: V1 기존 로직은 `aeMonthPerformances` 생성 시 모든 매출을 `renewedClients`로 카운트했음.
+            // 이는 '연장 실적 대시보드'라는 이름과 맞지 않음.
+            // V2 로직을 따르기로 했으므로, '연장' 건만 `Renewed`로 카운트하고, 매출도 연장 매출만 집계하는 것이 정확함.
+            // 단, `Total Clients`(담당 광고주) 계산은 전체를 대상으로 함.
+          }
         })
 
-        // 연장 실패 추가
-        failedRenewals.forEach(failure => {
-          if (!aeMonthPerformances.has(failure.ae)) {
-            const totalClients = aeTotalClientsMap.get(failure.ae)?.size || 0
-            aeMonthPerformances.set(failure.ae, {
-              aeName: failure.ae,
-              department: '',
-              totalClients: totalClients,
-              expiringClients: 0,
-              renewedClients: 0,
-              failedRenewals: 0,
-              renewalRevenue: 0
+        // 3-2. 해당 월의 종료 예정 데이터 (분모)
+        const aeTargetClientsMap = new Map<string, Set<string>>()
+
+        // (A) Clients 시트에서 해당 월 종료 예정 찾기
+        clientsRows.forEach(row => {
+          const clientName = (row[1] || '').trim()
+          const endDateStr = row[4] || ''
+          const aeString = row[5] || ''
+
+          if (!endDateStr || !clientName) return
+          const endDate = parseDate(endDateStr)
+          if (!endDate) return
+
+          if (endDate.getMonth() === tMonth - 1 && endDate.getFullYear() === tYear) {
+            const aeNames = extractAEName(aeString)
+            aeNames.forEach(aeName => {
+              const normalizedAE = normalizeStaffName(aeName)
+              if (!aeTargetClientsMap.has(normalizedAE)) aeTargetClientsMap.set(normalizedAE, new Set())
+              aeTargetClientsMap.get(normalizedAE)!.add(clientName)
             })
           }
-          const perf = aeMonthPerformances.get(failure.ae)!
-          perf.failedRenewals += 1
         })
 
-        const performances = Array.from(aeMonthPerformances.values())
-        const totalRenewed = performances.reduce((sum, p) => sum + p.renewedClients, 0)
-        const totalFailed = performances.reduce((sum, p) => sum + p.failedRenewals, 0)
-        const totalExpiring = totalRenewed + totalFailed
-        const renewalRate = totalExpiring > 0 ? Math.round((totalRenewed / totalExpiring) * 100 * 10) / 10 : 0
+        // (B) 원본데이터에서 연장 성공한 건도 분모에 강제 추가 (V2 핵심 로직)
+        monthSales.forEach(sale => {
+          if (sale.isRenewal) {
+            if (!aeTargetClientsMap.has(sale.aeName)) aeTargetClientsMap.set(sale.aeName, new Set())
+            aeTargetClientsMap.get(sale.aeName)!.add(sale.clientName)
+          }
+        })
 
+        // (C) 연장 실패 건 추가
+        // 종료일이 해당 월인 경우에만 연장 실패로 집계
+        const aeFailedMap = new Map<string, number>()
+        clientsRows.forEach(row => {
+          if (row[0] === '연장 실패') {
+            const endDateStr = row[4] || ''
+            const aeString = row[5] || ''
+            const endDate = parseDate(endDateStr)
+
+            if (endDate && endDate.getMonth() === tMonth - 1 && endDate.getFullYear() === tYear) {
+              const aeNames = extractAEName(aeString)
+              aeNames.forEach(aeName => {
+                const normalizedAE = normalizeStaffName(aeName)
+                if (!aeFailedMap.has(normalizedAE)) aeFailedMap.set(normalizedAE, 0)
+                aeFailedMap.set(normalizedAE, aeFailedMap.get(normalizedAE)! + 1)
+              })
+            }
+          }
+        })
+
+        // 3-3. AE별 통계 취합
+        const allAEs = new Set([...aeTargetClientsMap.keys(), ...aeSalesMap.keys()])
+
+        // 전체 담당 광고주 수 (진행 중) -> 이건 월별로 변하지 않는 현재 상태값임 (기존 V1 유지)
+        const aeTotalClientsCurrentMap = new Map<string, number>()
+        clientsRows.forEach(row => {
+          if (row[0] === '진행') {
+            extractAEName(row[5] || '').forEach(ae => {
+              const normalizedAE = normalizeStaffName(ae)
+              aeTotalClientsCurrentMap.set(normalizedAE, (aeTotalClientsCurrentMap.get(normalizedAE) || 0) + 1)
+            })
+          }
+        })
+
+        const performances = Array.from(allAEs).map(aeName => {
+          const targetSet = aeTargetClientsMap.get(aeName) || new Set()
+          const salesStat = aeSalesMap.get(aeName) || { count: 0, amount: 0, renewedClients: new Set() }
+
+          const expiringClients = targetSet.size
+          const renewedClients = salesStat.renewedClients.size // 연장 성공 고유 광고주 수
+          const failedRenewals = aeFailedMap.get(aeName) || 0
+
+          // 연장률 계산: 성공 / 대상 (100% 초과 방지)
+          const renewalRate = expiringClients > 0
+            ? Math.min(100, Math.round((renewedClients / expiringClients) * 100 * 10) / 10)
+            : 0
+
+          // 부서 정보 찾기 (해당 월 매출 발생 부서 우선, 없으면 Clients 시트 등에서 찾아야 하나 여기선 매출 데이터 기반)
+          const department = monthSales.find(s => s.aeName === aeName)?.department || ''
+
+          return {
+            aeName,
+            department,
+            totalClients: aeTotalClientsCurrentMap.get(aeName) || 0,
+            expiringClients,
+            renewedClients,
+            failedRenewals,
+            renewalRate,
+            renewalRevenue: salesStat.amount
+          }
+        }).filter(p => p.expiringClients > 0 || p.renewedClients > 0) // 실적이 있거나 예정이 있는 경우만
+          .sort((a, b) => b.renewalRevenue - a.renewalRevenue)
+
+        // 월별 합계
         return {
-          month,
+          month: targetYM,
           totalAEs: performances.length,
           totalClients: performances.reduce((sum, p) => sum + p.totalClients, 0),
-          totalExpiring,
-          totalRenewed,
-          totalFailed,
+          totalExpiring: performances.reduce((sum, p) => sum + p.expiringClients, 0),
+          totalRenewed: performances.reduce((sum, p) => sum + p.renewedClients, 0),
+          totalFailed: performances.reduce((sum, p) => sum + p.failedRenewals, 0),
           totalRevenue: performances.reduce((sum, p) => sum + p.renewalRevenue, 0),
-          renewalRate,
+          renewalRate: performances.reduce((sum, p) => sum + p.expiringClients, 0) > 0
+            ? Math.round((performances.reduce((sum, p) => sum + p.renewedClients, 0) / performances.reduce((sum, p) => sum + p.expiringClients, 0)) * 100 * 10) / 10
+            : 0,
           performances
         }
       })
+      .filter(stat => stat.performances.length > 0)
 
-    // 최신 월 또는 지정된 월의 데이터로 랭킹 생성
-    let aeRankings: any[] = []
-    let departmentStats: any[] = []
-
+    // 4. 응답 데이터 구성
     const targetMonthStats = month
       ? monthlyStats.find(m => m.month === month) || monthlyStats[0]
       : monthlyStats[0]
 
+    let aeRankings: any[] = []
+    let departmentStats: any[] = []
+
     if (targetMonthStats) {
-      // AE 랭킹
       aeRankings = targetMonthStats.performances
-        .map((perf: any) => ({
-          aeName: perf.aeName,
-          department: perf.department,
-          totalClients: perf.totalClients,
-          renewedClients: perf.renewedClients,
-          failedRenewals: perf.failedRenewals,
-          renewalRevenue: perf.renewalRevenue,
-          renewalRate: (perf.renewedClients + perf.failedRenewals) > 0
-            ? Math.round((perf.renewedClients / (perf.renewedClients + perf.failedRenewals)) * 100 * 10) / 10
-            : 0
-        }))
-        .sort((a: any, b: any) => b.renewalRevenue - a.renewalRevenue)
 
       // 부서별 통계
       const deptMap = new Map<string, any>()
@@ -285,7 +307,8 @@ export async function GET(request: NextRequest) {
             totalClients: 0,
             renewedClients: 0,
             failedRenewals: 0,
-            renewalRevenue: 0
+            renewalRevenue: 0,
+            expiringClients: 0
           })
         }
         const dept = deptMap.get(perf.department)!
@@ -294,6 +317,7 @@ export async function GET(request: NextRequest) {
         dept.renewedClients += perf.renewedClients
         dept.failedRenewals += perf.failedRenewals
         dept.renewalRevenue += perf.renewalRevenue
+        dept.expiringClients += perf.expiringClients
       })
 
       departmentStats = Array.from(deptMap.values())
@@ -301,8 +325,8 @@ export async function GET(request: NextRequest) {
           department: dept.department,
           totalAEs: dept.totalAEs.size,
           totalClients: dept.totalClients,
-          renewalRate: (dept.renewedClients + dept.failedRenewals) > 0
-            ? Math.round((dept.renewedClients / (dept.renewedClients + dept.failedRenewals)) * 100 * 10) / 10
+          renewalRate: dept.expiringClients > 0
+            ? Math.round((dept.renewedClients / dept.expiringClients) * 100 * 10) / 10
             : 0,
           renewedClients: dept.renewedClients,
           failedRenewals: dept.failedRenewals,
@@ -322,10 +346,11 @@ export async function GET(request: NextRequest) {
           : 0
       }
     })
+
   } catch (error) {
     console.error('Error fetching AE performance data:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch AE performance data' },
+      { error: '데이터를 불러오는데 실패했습니다.' },
       { status: 500 }
     )
   }
@@ -336,13 +361,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { month, performances, timestamp } = body
 
-    console.log('=== AE Performance Save Request ===')
-    console.log('Month:', month)
-    console.log('Performances count:', performances?.length)
-    console.log('Timestamp:', timestamp)
-
     if (!month || !performances || !Array.isArray(performances)) {
-      throw new Error('Invalid request data: missing month or performances')
+      throw new Error('잘못된 요청 데이터입니다: 월 또는 실적 데이터가 누락되었습니다.')
     }
 
     // Google Sheets에 저장할 데이터 준비
@@ -360,12 +380,8 @@ export async function POST(request: NextRequest) {
       perf.notes || ''
     ])
 
-    console.log('Data to save:', dataToSave.length, 'rows')
-
     // Google Sheets에 데이터 저장
     await writeToSheet('AEPerformance!A:K', dataToSave)
-
-    console.log('✅ AE Performance data saved successfully')
 
     return NextResponse.json({
       success: true,
@@ -373,13 +389,11 @@ export async function POST(request: NextRequest) {
       count: dataToSave.length
     })
   } catch (error) {
-    console.error('❌ Error saving AE performance data:', error)
-    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    console.error('Error saving AE performance data:', error)
     return NextResponse.json(
       {
-        error: 'Failed to save AE performance data',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: '데이터 저장에 실패했습니다.',
+        details: error instanceof Error ? error.message : '알 수 없는 오류'
       },
       { status: 500 }
     )

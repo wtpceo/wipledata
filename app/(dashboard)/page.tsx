@@ -190,13 +190,12 @@ export default function DashboardPage() {
             </p>
             <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
               <div
-                className={`h-2 rounded-full ${
-                  (data?.overview?.achievementRate || 0) >= 100
-                    ? "bg-green-600"
-                    : (data?.overview?.achievementRate || 0) >= 80
-                      ? "bg-yellow-600"
-                      : "bg-red-600"
-                }`}
+                className={`h-2 rounded-full ${(data?.overview?.achievementRate || 0) >= 100
+                  ? "bg-green-600"
+                  : (data?.overview?.achievementRate || 0) >= 80
+                    ? "bg-yellow-600"
+                    : "bg-red-600"
+                  }`}
                 style={{ width: `${Math.min(100, data?.overview?.achievementRate || 0)}%` }}
               />
             </div>
@@ -245,13 +244,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week1Goals.sales.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week1Goals.sales.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week1Goals.sales.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week1Goals.sales.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week1Goals.sales.achievementRate)}%` }}
                 />
               </div>
@@ -283,13 +281,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week1Goals.internal.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week1Goals.internal.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week1Goals.internal.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week1Goals.internal.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week1Goals.internal.achievementRate)}%` }}
                 />
               </div>
@@ -326,13 +323,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week2Goals.sales.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week2Goals.sales.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week2Goals.sales.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week2Goals.sales.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week2Goals.sales.achievementRate)}%` }}
                 />
               </div>
@@ -364,13 +360,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week2Goals.internal.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week2Goals.internal.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week2Goals.internal.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week2Goals.internal.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week2Goals.internal.achievementRate)}%` }}
                 />
               </div>
@@ -407,13 +402,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week3Goals.sales.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week3Goals.sales.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week3Goals.sales.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week3Goals.sales.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week3Goals.sales.achievementRate)}%` }}
                 />
               </div>
@@ -445,13 +439,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week3Goals.internal.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week3Goals.internal.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week3Goals.internal.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week3Goals.internal.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week3Goals.internal.achievementRate)}%` }}
                 />
               </div>
@@ -488,13 +481,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week4Goals.sales.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week4Goals.sales.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week4Goals.sales.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week4Goals.sales.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week4Goals.sales.achievementRate)}%` }}
                 />
               </div>
@@ -526,13 +518,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week4Goals.internal.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week4Goals.internal.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week4Goals.internal.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week4Goals.internal.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week4Goals.internal.achievementRate)}%` }}
                 />
               </div>
@@ -569,13 +560,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week5Goals.sales.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week5Goals.sales.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week5Goals.sales.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week5Goals.sales.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week5Goals.sales.achievementRate)}%` }}
                 />
               </div>
@@ -607,13 +597,12 @@ export default function DashboardPage() {
               </p>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${
-                    data.week5Goals.internal.achievementRate >= 100
-                      ? "bg-green-600"
-                      : data.week5Goals.internal.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                  }`}
+                  className={`h-2 rounded-full ${data.week5Goals.internal.achievementRate >= 100
+                    ? "bg-green-600"
+                    : data.week5Goals.internal.achievementRate >= 80
+                      ? "bg-yellow-600"
+                      : "bg-red-600"
+                    }`}
                   style={{ width: `${Math.min(100, data.week5Goals.internal.achievementRate)}%` }}
                 />
               </div>
