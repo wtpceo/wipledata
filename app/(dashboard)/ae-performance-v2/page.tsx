@@ -62,6 +62,16 @@ interface Summary {
   targetMonth: string
 }
 
+const formatDateOnly = (dateStr: string) => {
+  if (!dateStr) return '';
+  // "YYYY. MM. DD." 형태이거나 "YYYY-MM-DD" 등에서 날짜만 추출
+  const match = dateStr.match(/(\d{4})[./-]\s?(\d{1,2})[./-]\s?(\d{1,2})/);
+  if (match) {
+    return `${match[1]}년 ${match[2]}월 ${match[3]}일`;
+  }
+  return dateStr.split(' ')[0]; // fallback
+}
+
 export default function AEPerformanceV2Page() {
   const [loading, setLoading] = useState(true)
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7))
@@ -907,7 +917,7 @@ export default function AEPerformanceV2Page() {
                       {detail.inputDate && (
                         <div className="col-span-2 text-xs text-muted-foreground mt-1 bg-blue-50 p-2 rounded border border-blue-100">
                           <span className="font-semibold text-blue-800">입력(입금) 날짜: </span>
-                          <span className="text-blue-900">{detail.inputDate}</span>
+                          <span className="text-blue-900">{formatDateOnly(detail.inputDate)}</span>
                         </div>
                       )}
                     </div>
