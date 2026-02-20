@@ -738,10 +738,12 @@ export default function AEPerformanceV2Page() {
                   <div>
                     <Label>총 계약금액 *</Label>
                     <Input
-                      type="number"
-                      min="0"
-                      value={renewalAmount || ''}
-                      onChange={(e) => setRenewalAmount(parseInt(e.target.value) || 0)}
+                      type="text"
+                      value={renewalAmount ? renewalAmount.toLocaleString() : ''}
+                      onChange={(e) => {
+                        const numericValue = e.target.value.replace(/[^0-9]/g, '')
+                        setRenewalAmount(numericValue ? parseInt(numericValue, 10) : 0)
+                      }}
                       placeholder="원"
                     />
                   </div>
