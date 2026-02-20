@@ -138,6 +138,7 @@ export async function GET(request: NextRequest) {
       // (생략 - 필요 시 추가 가능하나 로직 단순화를 위해 분모 계산에 집중)
 
       if (!endDateStr || !clientName) return
+      if (status !== '진행' && status !== '대기') return
       const endDate = parseDate(endDateStr)
       if (!endDate) return
 
