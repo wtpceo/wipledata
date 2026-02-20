@@ -205,6 +205,11 @@ export default function AEPerformanceV2Page() {
         if (response.ok) {
           setWaitingClients(prev => new Set([...prev, client.rowIndex]))
           alert(`${client.clientName}을(를) 대기 상태로 설정했습니다.\n다음 달에도 미처리 건으로 표시됩니다.`)
+
+          fetchData()
+          if (showPending) {
+            fetchAllPending()
+          }
         } else {
           alert('대기 상태 설정에 실패했습니다.')
         }
@@ -274,6 +279,11 @@ export default function AEPerformanceV2Page() {
 
         // 통계 재계산
         fetchData()
+
+        // 두 목록 간의 동기화를 위해 미처리 연장 건 창이 켜져있다면 다시 불러오기
+        if (showPending) {
+          fetchAllPending()
+        }
 
         setDialogOpen(false)
       } else {
