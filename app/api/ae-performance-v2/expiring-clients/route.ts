@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     const rawData = await readFromSheet('원본데이터!A2:T')
 
     // 3. 원본데이터 파싱 (이번 달 매출 및 연장 건 확인)
-    const salesMap = new Map<string, { count: number, amount: number }>() // AE별 매출 통계
+    const salesMap = new Map<string, { count: number, amount: number, renewedClients: any[] }>() // AE별 매출 통계
     const renewalSuccessSet = new Set<string>() // 연장 성공한 업체명 목록 (AE:ClientName 조합)
 
     rawData.forEach(row => {
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
 
       if (isTargetMonth) {
         // 매출 집계
-        if (!salesMap.has(aeName)) salesMap.set(aeName, { count: 0, amount: 0 })
+        if (!salesMap.has(aeName)) salesMap.set(aeName, { count: 0, amount: 0, renewedClients: [] })
         const stat = salesMap.get(aeName)!
         stat.count += 1
         stat.amount += totalAmount
@@ -108,6 +108,15 @@ export async function GET(request: NextRequest) {
         // [핵심] 연장 성공 건 식별 -> 분모에 강제 추가할 예정
         if (salesType.includes('연장') || salesType.includes('재계약')) {
           renewalSuccessSet.add(`${aeName}:${clientName}`)
+          stat.renewedClients.push({
+            clientName,
+            salesType,
+            totalAmount,
+            renewalMonths: parseInt(row[6] || '0', 10),
+            productName: row[5] || '',
+            contractDate: row[14] || '',
+            contractEndDate: row[15] || ''
+          })
         }
       }
     })
@@ -142,6 +151,7 @@ export async function GET(request: NextRequest) {
 
           // 상세 목록에도 추가
           expiringClientsList.push({
+            rowIndex: idx + 2,
             clientName,
             aeName,
             amount,
@@ -189,7 +199,7 @@ export async function GET(request: NextRequest) {
 
     const aeStats = Array.from(allAEs).map(aeName => {
       const targetSet = aeTargetClientsMap.get(aeName) || new Set()
-      const salesStat = salesMap.get(aeName) || { count: 0, amount: 0 }
+      const salesStat = salesMap.get(aeName) || { count: 0, amount: 0, renewedClients: [] }
 
       const expiringCount = targetSet.size // 보정된 분모 (원래 예정 + 성공한 건)
       const salesCount = salesStat.count   // 분자
@@ -202,6 +212,7 @@ export async function GET(request: NextRequest) {
         failedClients: 0, // 별도 계산 필요 시 추가
         pendingClients: Math.max(0, expiringCount - salesCount),
         totalRenewalAmount: salesStat.amount,
+        renewedClientsDetails: salesStat.renewedClients || [],
         // 연장율: 100% 초과 방지됨
         renewalRate: expiringCount > 0
           ? Math.round((salesCount / expiringCount) * 100)

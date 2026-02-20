@@ -32,6 +32,16 @@ interface ExpiringClient {
   daysOverdue?: number
 }
 
+interface RenewedClientDetail {
+  clientName: string
+  salesType: string
+  totalAmount: number
+  renewalMonths: number
+  productName: string
+  contractDate: string
+  contractEndDate: string
+}
+
 interface AEStat {
   aeName: string
   totalClients: number
@@ -41,6 +51,7 @@ interface AEStat {
   pendingClients: number
   totalRenewalAmount: number
   renewalRate: number
+  renewedClientsDetails?: RenewedClientDetail[]
 }
 
 interface Summary {
@@ -68,6 +79,10 @@ export default function AEPerformanceV2Page() {
   // 아코디언 상태 (AE별 펼침/접힘)
   const [expandedAEs, setExpandedAEs] = useState<string[]>([])
   const [expandedPendingAEs, setExpandedPendingAEs] = useState<string[]>([])
+
+  // 매출 상세 다이얼로그 상태
+  const [aeDetailsDialogOpen, setAeDetailsDialogOpen] = useState(false)
+  const [selectedAeStats, setSelectedAeStats] = useState<AEStat | null>(null)
 
   // 다이얼로그 상태
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -234,13 +249,13 @@ export default function AEPerformanceV2Page() {
             prev.map(client =>
               client.rowIndex === selectedClient.rowIndex
                 ? {
-                    ...client,
-                    status: dialogAction,
-                    renewalMonths: dialogAction === 'renewed' ? renewalMonths : 0,
-                    renewalAmount: dialogAction === 'renewed' ? renewalAmount : 0,
-                    failureReason: '',
-                    endDate: dialogAction === 'renewed' && data.newEndDate ? data.newEndDate : client.endDate
-                  }
+                  ...client,
+                  status: dialogAction,
+                  renewalMonths: dialogAction === 'renewed' ? renewalMonths : 0,
+                  renewalAmount: dialogAction === 'renewed' ? renewalAmount : 0,
+                  failureReason: '',
+                  endDate: dialogAction === 'renewed' && data.newEndDate ? data.newEndDate : client.endDate
+                }
                 : client
             )
           )
@@ -499,10 +514,9 @@ export default function AEPerformanceV2Page() {
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="font-bold text-lg">{stat.aeName}</h3>
                   <div className="text-sm text-muted-foreground">
-                    연장률: <span className={`font-bold ${
-                      stat.renewalRate >= 80 ? 'text-green-600' :
+                    연장률: <span className={`font-bold ${stat.renewalRate >= 80 ? 'text-green-600' :
                       stat.renewalRate >= 50 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>{stat.renewalRate}%</span>
+                      }`}>{stat.renewalRate}%</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
@@ -528,7 +542,15 @@ export default function AEPerformanceV2Page() {
                   </div>
                   <div>
                     <p className="text-muted-foreground">총 매출</p>
-                    <p className="text-lg font-bold">{formatCurrency(stat.totalRenewalAmount)}</p>
+                    <button
+                      onClick={() => {
+                        setSelectedAeStats(stat)
+                        setAeDetailsDialogOpen(true)
+                      }}
+                      className="text-lg font-bold hover:text-blue-600 hover:underline text-left transition-colors"
+                    >
+                      {formatCurrency(stat.totalRenewalAmount)}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -586,84 +608,83 @@ export default function AEPerformanceV2Page() {
                   {/* 광고주 목록 - 펼쳤을 때만 표시 */}
                   {isExpanded && (
                     <div className="border-t p-4 space-y-3">
-                  {clients.map((client) => {
-                    const isWaiting = client.status === 'waiting' || waitingClients.has(client.rowIndex)
-                    return (
-                    <div
-                      key={`${client.rowIndex}-${client.aeName}`}
-                      className={`border rounded-lg p-4 ${
-                        client.status === 'renewed' ? 'bg-green-50 border-green-200' :
-                        client.status === 'failed' ? 'bg-red-50 border-red-200' :
-                        isWaiting ? 'bg-blue-50 border-blue-200' : ''
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-bold">{client.clientName}</h4>
-                            {client.isDuplicate && (
-                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                                중복 (공동담당: {client.duplicateWith.join(', ')})
-                              </span>
-                            )}
+                      {clients.map((client) => {
+                        const isWaiting = client.status === 'waiting' || waitingClients.has(client.rowIndex)
+                        return (
+                          <div
+                            key={`${client.rowIndex}-${client.aeName}`}
+                            className={`border rounded-lg p-4 ${client.status === 'renewed' ? 'bg-green-50 border-green-200' :
+                              client.status === 'failed' ? 'bg-red-50 border-red-200' :
+                                isWaiting ? 'bg-blue-50 border-blue-200' : ''
+                              }`}
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-bold">{client.clientName}</h4>
+                                  {client.isDuplicate && (
+                                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                      중복 (공동담당: {client.duplicateWith.join(', ')})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  <p>계약금액: {formatCurrency(client.amount)}</p>
+                                  <p>종료일: {client.endDate}</p>
+                                  {client.status === 'renewed' && (
+                                    <>
+                                      <p className="text-green-600 font-medium">
+                                        ✓ 연장 성공 ({client.renewalMonths}개월, {formatCurrency(client.renewalAmount)})
+                                      </p>
+                                    </>
+                                  )}
+                                  {client.status === 'failed' && (
+                                    <p className="text-red-600 font-medium">
+                                      ✗ 연장 실패
+                                      {client.failureReason && `: ${client.failureReason}`}
+                                    </p>
+                                  )}
+                                  {isWaiting && (
+                                    <p className="text-blue-600 font-medium">
+                                      ⏳ 대기 중 (다음 달에도 표시됨)
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {client.status === 'pending' && !isWaiting && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => openDialog(client, 'renewed')}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    연장 성공
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => openDialog(client, 'failed')}
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    연장 실패
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openDialog(client, 'pending')}
+                                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                                  >
+                                    <AlertTriangle className="h-4 w-4 mr-1" />
+                                    대기
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground space-y-1">
-                            <p>계약금액: {formatCurrency(client.amount)}</p>
-                            <p>종료일: {client.endDate}</p>
-                            {client.status === 'renewed' && (
-                              <>
-                                <p className="text-green-600 font-medium">
-                                  ✓ 연장 성공 ({client.renewalMonths}개월, {formatCurrency(client.renewalAmount)})
-                                </p>
-                              </>
-                            )}
-                            {client.status === 'failed' && (
-                              <p className="text-red-600 font-medium">
-                                ✗ 연장 실패
-                                {client.failureReason && `: ${client.failureReason}`}
-                              </p>
-                            )}
-                            {isWaiting && (
-                              <p className="text-blue-600 font-medium">
-                                ⏳ 대기 중 (다음 달에도 표시됨)
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {client.status === 'pending' && !isWaiting && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => openDialog(client, 'renewed')}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              연장 성공
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => openDialog(client, 'failed')}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              연장 실패
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openDialog(client, 'pending')}
-                              className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                            >
-                              <AlertTriangle className="h-4 w-4 mr-1" />
-                              대기
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    )
-                  })}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -679,7 +700,7 @@ export default function AEPerformanceV2Page() {
           <DialogHeader>
             <DialogTitle>
               {dialogAction === 'renewed' ? '연장 성공 처리' :
-               dialogAction === 'failed' ? '연장 실패 처리' : '대기 처리'}
+                dialogAction === 'failed' ? '연장 실패 처리' : '대기 처리'}
             </DialogTitle>
             <DialogDescription>
               {selectedClient?.clientName}
@@ -690,7 +711,7 @@ export default function AEPerformanceV2Page() {
             {dialogAction === 'pending' ? (
               <div className="py-4">
                 <p className="text-sm text-muted-foreground">
-                  이 광고주를 대기 상태로 유지합니다.<br/>
+                  이 광고주를 대기 상태로 유지합니다.<br />
                   아무 처리도 하지 않으며, 다음 달에도 종료 예정 목록에 계속 표시됩니다.
                 </p>
               </div>
@@ -798,17 +819,16 @@ export default function AEPerformanceV2Page() {
             ) : (
               <>
                 <div>
-                  <Label>연장 실패 사유</Label>
+                  <Label>실패 사유</Label>
                   <Textarea
                     value={failureReason}
                     onChange={(e) => setFailureReason(e.target.value)}
-                    placeholder="실패 사유를 입력하세요 (선택사항)"
-                    rows={3}
+                    placeholder="연장이 안 된 사유를 입력하세요"
+                    className="h-24"
                   />
                 </div>
-                <div className="text-sm text-muted-foreground bg-red-50 p-3 rounded">
-                  <p>• 광고주 상태가 "종료"로 변경됩니다.</p>
-                  <p>• 전체 카운트에서 제외됩니다.</p>
+                <div className="text-sm text-yellow-800 bg-yellow-50 p-3 rounded">
+                  <p>이 광고주는 연장 실패 목록에 저장되며 해당 월 목록에서 제외됩니다.</p>
                 </div>
               </>
             )}
@@ -816,26 +836,67 @@ export default function AEPerformanceV2Page() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {dialogAction === 'pending' ? '닫기' : '취소'}
+              취소
             </Button>
-            {dialogAction !== 'pending' && (
-              <Button
-                onClick={handleUpdate}
-                disabled={
-                  dialogAction === 'renewed' && (
-                    renewalMonths < 1 ||
-                    renewalAmount < 1 ||
-                    productName === '상품을 선택하세요' ||
-                    (productName === '기타' && !productOther) ||
-                    paymentMethod === '결제 방식을 선택하세요' ||
-                    (paymentMethod === '기타' && !paymentMethodOther)
-                  )
-                }
-                className={dialogAction === 'renewed' ? 'bg-green-600 hover:bg-green-700' : ''}
-              >
-                {dialogAction === 'renewed' ? '연장 성공 처리' : '연장 실패 처리'}
-              </Button>
+            <Button
+              onClick={handleUpdate}
+              className={dialogAction === 'renewed' ? 'bg-green-600 hover:bg-green-700' :
+                dialogAction === 'failed' ? 'bg-red-600 hover:bg-red-700' : ''}
+            >
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 매출 상세 다이얼로그 */}
+      <Dialog open={aeDetailsDialogOpen} onOpenChange={setAeDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedAeStats?.aeName} 총 매출 상세 내역
+            </DialogTitle>
+            <DialogDescription>
+              총 {selectedAeStats?.renewedClientsDetails?.length || 0}건 / {formatCurrency(selectedAeStats?.totalRenewalAmount || 0)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto space-y-4">
+            {selectedAeStats?.renewedClientsDetails?.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">연장 내역이 없습니다.</p>
+            ) : (
+              <div className="space-y-3">
+                {selectedAeStats?.renewedClientsDetails?.map((detail, idx) => (
+                  <div key={idx} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-bold text-lg">{detail.clientName}</h4>
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-medium">
+                        {detail.salesType}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">계약금액:</span>{' '}
+                        <span className="font-bold text-green-700">{formatCurrency(detail.totalAmount)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">계약기간:</span>{' '}
+                        <span className="font-bold">{detail.renewalMonths}개월</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">마케팅 상품명:</span>{' '}
+                        <span>{detail.productName}</span>
+                      </div>
+                      <div className="col-span-2 text-xs text-muted-foreground mt-1">
+                        계약기간: {detail.contractDate} ~ {detail.contractEndDate}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAeDetailsDialogOpen(false)}>닫기</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
