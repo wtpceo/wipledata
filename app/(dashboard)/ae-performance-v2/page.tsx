@@ -861,11 +861,11 @@ export default function AEPerformanceV2Page() {
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto space-y-4">
-            {selectedAeStats?.renewedClientsDetails?.length === 0 ? (
+            {(!selectedAeStats?.renewedClientsDetails || selectedAeStats.renewedClientsDetails.length === 0) ? (
               <p className="text-center text-muted-foreground py-8">연장 내역이 없습니다.</p>
             ) : (
               <div className="space-y-3">
-                {selectedAeStats?.renewedClientsDetails?.map((detail, idx) => (
+                {(selectedAeStats.renewedClientsDetails || []).map((detail, idx) => (
                   <div key={idx} className="border rounded-lg p-4 bg-gray-50">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-bold text-lg">{detail.clientName}</h4>
