@@ -115,7 +115,8 @@ export async function GET(request: NextRequest) {
             renewalMonths: parseInt(row[6] || '0', 10),
             productName: row[5] || '',
             contractDate: row[14] || '',
-            contractEndDate: row[15] || ''
+            contractEndDate: row[15] || '',
+            inputDate: row[0] || ''
           })
         }
       }

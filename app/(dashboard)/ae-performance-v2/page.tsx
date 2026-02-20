@@ -40,6 +40,7 @@ interface RenewedClientDetail {
   productName: string
   contractDate: string
   contractEndDate: string
+  inputDate?: string
 }
 
 interface AEStat {
@@ -876,8 +877,8 @@ export default function AEPerformanceV2Page() {
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-bold text-lg">{detail.clientName}</h4>
                       <span className={`text-xs px-2 py-1 rounded font-medium ${detail.salesType.includes('소개')
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
                         }`}>
                         {detail.salesType}
                       </span>
@@ -899,6 +900,12 @@ export default function AEPerformanceV2Page() {
                         <div className="col-span-2 text-xs text-muted-foreground mt-1 bg-white p-2 rounded border">
                           <span className="font-semibold">진행 날짜: </span>
                           {detail.contractDate || '?'} ~ {detail.contractEndDate || '?'}
+                        </div>
+                      )}
+                      {detail.inputDate && (
+                        <div className="col-span-2 text-xs text-muted-foreground mt-1 bg-blue-50 p-2 rounded border border-blue-100">
+                          <span className="font-semibold text-blue-800">입력(입금) 날짜: </span>
+                          <span className="text-blue-900">{detail.inputDate}</span>
                         </div>
                       )}
                     </div>
