@@ -105,8 +105,8 @@ export async function GET(request: NextRequest) {
         stat.count += 1
         stat.amount += totalAmount
 
-        // [핵심] 연장 성공 건 식별 -> 분모에 강제 추가할 예정
-        if (salesType.includes('연장') || salesType.includes('재계약')) {
+        // [핵심] 연장 성공 건 식별 -> 분모에 강제 추가할 예정 (연장, 재계약, 소개 포함)
+        if (salesType.includes('연장') || salesType.includes('재계약') || salesType.includes('소개')) {
           renewalSuccessSet.add(`${aeName}:${clientName}`)
           stat.renewedClients.push({
             clientName,
@@ -175,13 +175,15 @@ export async function GET(request: NextRequest) {
       if (isNew) {
         // 분모에 추가
         aeTargetClientsMap.get(aeName)!.add(clientName)
-
-        // 상세 목록에는 '성공으로 인해 추가됨' 표시하여 추가 (선택사항)
-        // 화면에 보여줄지 여부는 프론트엔드에서 결정하되, 계산을 위해선 내부적으로 카운트됨
-        // 여기서는 expiringClientsList에는 굳이 안 넣어도 카운트(분모)는 정확해짐.
-        // 다만 '대기 중' 개수와 맞추려면 넣는 게 좋음.
       }
     })
+
+    // expiringClientsList 날짜 오름차순(빠른 종료일 순)으로 정렬
+    expiringClientsList.sort((a, b) => {
+      const dateA = parseDate(a.endDate)?.getTime() || 0;
+      const dateB = parseDate(b.endDate)?.getTime() || 0;
+      return dateA - dateB;
+    });
 
     // 5. 최종 통계 산출 (Rankings)
     // 모든 AE 목록 추출 (Clients 시트 + 매출 발생 AE)
@@ -215,13 +217,13 @@ export async function GET(request: NextRequest) {
         renewedClientsDetails: salesStat.renewedClients || [],
         // 연장율: 100% 초과 방지됨
         renewalRate: expiringCount > 0
-          ? Math.round((salesCount / expiringCount) * 100)
+          ? Math.min(100, Math.round((salesCount / expiringCount) * 100))
           : 0
       }
     }).sort((a, b) => b.expiringClients - a.expiringClients)
 
     return NextResponse.json({
-      expiringClients: expiringClientsList, // 화면 팝업용 목록
+      expiringClients: expiringClientsList, // 정렬된 화면 팝업용 목록
       aeStats, // 화면 대시보드 카드용 통계
       summary: {
         totalExpiringClients: expiringClientsList.length,

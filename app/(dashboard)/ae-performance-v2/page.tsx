@@ -541,16 +541,22 @@ export default function AEPerformanceV2Page() {
                     <p className="text-xl font-bold text-red-600">{stat.failedClients}개</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">총 매출</p>
-                    <button
-                      onClick={() => {
-                        setSelectedAeStats(stat)
-                        setAeDetailsDialogOpen(true)
-                      }}
-                      className="text-lg font-bold hover:text-blue-600 hover:underline text-left transition-colors"
-                    >
+                    <div className="flex items-center gap-2">
+                      <p className="text-muted-foreground">총 매출</p>
+                      <button
+                        onClick={() => {
+                          setSelectedAeStats(stat)
+                          setAeDetailsDialogOpen(true)
+                        }}
+                        className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100 transition-colors border border-blue-200"
+                        title="연장 및 소개 업체 목록 보기"
+                      >
+                        상세보기
+                      </button>
+                    </div>
+                    <p className="text-lg font-bold mt-1">
                       {formatCurrency(stat.totalRenewalAmount)}
-                    </button>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -854,7 +860,7 @@ export default function AEPerformanceV2Page() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {selectedAeStats?.aeName} 총 매출 상세 내역
+              {selectedAeStats?.aeName} 연장/소개 내역
             </DialogTitle>
             <DialogDescription>
               총 {selectedAeStats?.renewedClientsDetails?.length || 0}건 / {formatCurrency(selectedAeStats?.totalRenewalAmount || 0)}
@@ -862,14 +868,17 @@ export default function AEPerformanceV2Page() {
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto space-y-4">
             {(!selectedAeStats?.renewedClientsDetails || selectedAeStats.renewedClientsDetails.length === 0) ? (
-              <p className="text-center text-muted-foreground py-8">연장 내역이 없습니다.</p>
+              <p className="text-center text-muted-foreground py-8">조회된 연장/소개 내역이 없습니다.</p>
             ) : (
               <div className="space-y-3">
                 {(selectedAeStats.renewedClientsDetails || []).map((detail, idx) => (
                   <div key={idx} className="border rounded-lg p-4 bg-gray-50">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-bold text-lg">{detail.clientName}</h4>
-                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-medium">
+                      <span className={`text-xs px-2 py-1 rounded font-medium ${detail.salesType.includes('소개')
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
+                        }`}>
                         {detail.salesType}
                       </span>
                     </div>
@@ -886,9 +895,12 @@ export default function AEPerformanceV2Page() {
                         <span className="text-muted-foreground">마케팅 상품명:</span>{' '}
                         <span>{detail.productName}</span>
                       </div>
-                      <div className="col-span-2 text-xs text-muted-foreground mt-1">
-                        계약기간: {detail.contractDate} ~ {detail.contractEndDate}
-                      </div>
+                      {(detail.contractDate || detail.contractEndDate) && (
+                        <div className="col-span-2 text-xs text-muted-foreground mt-1 bg-white p-2 rounded border">
+                          <span className="font-semibold">진행 날짜: </span>
+                          {detail.contractDate || '?'} ~ {detail.contractEndDate || '?'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
