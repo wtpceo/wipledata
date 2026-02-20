@@ -31,7 +31,7 @@ interface SalesDashboardData {
 export default function SalesDashboardPage() {
   const [data, setData] = useState<SalesDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState('2025-11')
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7))
 
   useEffect(() => {
     fetchSalesData(selectedMonth)

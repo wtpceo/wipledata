@@ -45,7 +45,7 @@ interface KPIData {
 export default function KPIPage() {
   const [data, setData] = useState<KPIData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState('2025-11')
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7))
 
   useEffect(() => {
     fetchKPIData(selectedMonth)
@@ -185,13 +185,12 @@ export default function KPIPage() {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className={`h-2 rounded-full ${
-                      month.achievementRate >= 100
+                    className={`h-2 rounded-full ${month.achievementRate >= 100
                         ? "bg-green-600"
                         : month.achievementRate >= 80
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                    }`}
+                          ? "bg-yellow-600"
+                          : "bg-red-600"
+                      }`}
                     style={{ width: `${Math.min(100, month.achievementRate)}%` }}
                   />
                 </div>
@@ -223,10 +222,9 @@ export default function KPIPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-medium">{formatCurrency(quarter.actual)}</p>
-                    <p className={`text-sm ${
-                      quarter.achievementRate >= 100 ? "text-green-600" :
-                      quarter.achievementRate >= 80 ? "text-yellow-600" : "text-red-600"
-                    }`}>
+                    <p className={`text-sm ${quarter.achievementRate >= 100 ? "text-green-600" :
+                        quarter.achievementRate >= 80 ? "text-yellow-600" : "text-red-600"
+                      }`}>
                       {formatPercent(quarter.achievementRate)}
                     </p>
                   </div>
