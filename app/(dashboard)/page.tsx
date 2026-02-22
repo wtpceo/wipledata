@@ -150,91 +150,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 주요 지표 카드 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">이번 달 매출</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(data?.overview?.currentMonthTotal || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              전월 대비 {(data?.overview?.monthGrowthRate ?? 0) > 0 ? '+' : ''}{data?.overview?.monthGrowthRate ?? 0}%
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">신규 광고주</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.overview?.newClients || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              이번 달 신규
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">목표 달성률</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              <span className={
-                (data?.overview?.achievementRate || 0) >= 100
-                  ? "text-green-600"
-                  : (data?.overview?.achievementRate || 0) >= 80
-                    ? "text-yellow-600"
-                    : "text-red-600"
-              }>
-                {data?.overview?.achievementRate || 0}%
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              목표: {formatCurrency(data?.overview?.monthlyGoal || 0)}
-            </p>
-            <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full ${(data?.overview?.achievementRate || 0) >= 100
-                  ? "bg-green-600"
-                  : (data?.overview?.achievementRate || 0) >= 80
-                    ? "bg-yellow-600"
-                    : "bg-red-600"
-                  }`}
-                style={{ width: `${Math.min(100, data?.overview?.achievementRate || 0)}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">활성 광고주</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.overview?.totalClients || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              전체 광고주 수
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* 연간 매출 트렌드 그래프 */}
       {data?.yearlyTrend && data.yearlyTrend.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>2026년 월별 매출 현황</CardTitle>
             <CardDescription>
-              영업부 / 내근직 부서별 월 매출 추이 (현재 월 강조)
+              영업부 / 내무부 부서별 월 매출 추이 (현재 월 강조)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -354,6 +276,85 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* 주요 지표 카드 */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">이번 달 매출</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(data?.overview?.currentMonthTotal || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              전월 대비 {(data?.overview?.monthGrowthRate ?? 0) > 0 ? '+' : ''}{data?.overview?.monthGrowthRate ?? 0}%
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">신규 광고주</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data?.overview?.newClients || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              이번 달 신규
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">목표 달성률</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              <span className={
+                (data?.overview?.achievementRate || 0) >= 100
+                  ? "text-green-600"
+                  : (data?.overview?.achievementRate || 0) >= 80
+                    ? "text-yellow-600"
+                    : "text-red-600"
+              }>
+                {data?.overview?.achievementRate || 0}%
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              목표: {formatCurrency(data?.overview?.monthlyGoal || 0)}
+            </p>
+            <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full ${(data?.overview?.achievementRate || 0) >= 100
+                  ? "bg-green-600"
+                  : (data?.overview?.achievementRate || 0) >= 80
+                    ? "bg-yellow-600"
+                    : "bg-red-600"
+                  }`}
+                style={{ width: `${Math.min(100, data?.overview?.achievementRate || 0)}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">활성 광고주</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data?.overview?.totalClients || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              전체 광고주 수
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
 
       {/* 1주차 목표 섹션 */}
       {data?.week1Goals && (
@@ -809,8 +810,8 @@ export default function DashboardPage() {
                   key={tab.value}
                   onClick={() => { setInputPersonWeek(tab.value) }}
                   className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${inputPersonWeek === tab.value
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
                     }`}
                 >
                   {tab.label}
@@ -872,8 +873,8 @@ export default function DashboardPage() {
                   key={tab.value}
                   onClick={() => { setDepartmentWeek(tab.value); setShowAllDepartments(false) }}
                   className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${departmentWeek === tab.value
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
                     }`}
                 >
                   {tab.label}
