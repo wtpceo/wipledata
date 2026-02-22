@@ -176,7 +176,7 @@ export default function DashboardPage() {
                           {payload.value}
                         </text>
                         {total > 0 && (
-                          <text x={0} y={0} dy={34} textAnchor="middle" fill="#3b82f6" fontSize={11} fontWeight="bold">
+                          <text x={0} y={0} dy={34} textAnchor="middle" fill="#f97316" fontSize={11} fontWeight="bold">
                             {formatCurrency(total)}
                           </text>
                         )}
