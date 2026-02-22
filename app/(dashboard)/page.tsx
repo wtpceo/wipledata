@@ -164,7 +164,27 @@ export default function DashboardPage() {
                 margin={{ top: 24, right: 16, left: 8, bottom: 4 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <XAxis
+                  dataKey="label"
+                  tick={(props: any) => {
+                    const { x, y, payload } = props;
+                    const entry = data?.yearlyTrend?.find(d => d.label === payload.value);
+                    const total = entry?.total || 0;
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" fontSize={12}>
+                          {payload.value}
+                        </text>
+                        {total > 0 && (
+                          <text x={0} y={0} dy={34} textAnchor="middle" fill="#3b82f6" fontSize={11} fontWeight="bold">
+                            {formatCurrency(total)}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  }}
+                  height={50}
+                />
                 <YAxis
                   tickFormatter={(v: number) => new Intl.NumberFormat('ko-KR').format(v)}
                   tick={{ fontSize: 11 }}
@@ -220,8 +240,6 @@ export default function DashboardPage() {
                     <Cell
                       key={`sales-${index}`}
                       fill="#3b82f6"
-                      stroke={entry.isCurrent ? "white" : "transparent"}
-                      strokeWidth={entry.isCurrent ? 2 : 0}
                     />
                   ))}
                   <LabelList
@@ -249,8 +267,6 @@ export default function DashboardPage() {
                     <Cell
                       key={`internal-${index}`}
                       fill="#22c55e"
-                      stroke={entry.isCurrent ? "white" : "transparent"}
-                      strokeWidth={entry.isCurrent ? 2 : 0}
                     />
                   ))}
                   <LabelList

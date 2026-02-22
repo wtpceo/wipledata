@@ -429,8 +429,6 @@ export default function AEPerformanceV2Page() {
                         <Cell
                           key={`cell-${idx}`}
                           fill={aeColors[index % aeColors.length]}
-                          stroke={entry.isCurrent ? "white" : "transparent"}
-                          strokeWidth={entry.isCurrent ? 2 : 0}
                         />
                       ))}
                       {isLast && (
