@@ -43,26 +43,19 @@ export async function GET(request: NextRequest) {
 
         rawData.forEach(row => {
             const department = row[1] || ''
-            if (department !== '영업부') return // 영업부 실적만
+            if (department === '영업부') return // 내근직/내무부 실적만
 
             const aeName = normalizeStaffName(row[2] || '')
             if (!aeName) return
 
             const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0
-            const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0
-            const totalAmount = contractAmount - outsourcingCost
+            const totalAmount = contractAmount // 내근직은 아웃소싱 비용 차감 안 함
 
-            const inputMonth = row[18] || ''
             let targetMonth = ''
-
-            if (inputMonth) {
-                if (inputMonth.includes('-')) {
-                    targetMonth = inputMonth
-                } else if (inputMonth.includes('.')) {
-                    targetMonth = inputMonth.replace('.', '-')
-                } else if (inputMonth.length === 6) {
-                    targetMonth = `${inputMonth.substring(0, 4)}-${inputMonth.substring(4, 6)}`
-                }
+            const timestamp = row[0] || ''
+            const date = parseDate(timestamp)
+            if (date && !isNaN(date.getTime())) {
+                targetMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
             }
 
             if (yearlyTrendMap.has(targetMonth)) {
