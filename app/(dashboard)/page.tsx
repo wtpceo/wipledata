@@ -207,21 +207,29 @@ export default function DashboardPage() {
                     )
                   }}
                 />
-                <Legend content={({ payload }) => (
-                  <div className="flex justify-center gap-6 text-sm mb-4 mt-2">
-                    {payload?.map((entry, index) => (
-                      <div key={`item-${index}`} className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                        <span style={{ color: entry.color, fontWeight: 'bold' }}>{entry.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )} />
+                <Legend content={({ payload }) => {
+                  const items = [
+                    { value: '영업부', color: '#3b82f6' },
+                    { value: '내무부', color: '#22c55e' }
+                  ]
+                  return (
+                    <div className="flex justify-center gap-6 text-sm mb-4 mt-2">
+                      {items.map((entry, index) => (
+                        <div key={`item-${index}`} className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                          <span style={{ color: entry.color, fontWeight: 'bold' }}>{entry.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                }} />
                 <Bar dataKey="salesDept" name="영업부" stackId="a" radius={[0, 0, 0, 0]} maxBarSize={40}>
                   {data.yearlyTrend.map((entry, index) => (
                     <Cell
                       key={`sales-${index}`}
-                      fill={entry.isCurrent ? "#1d4ed8" : "#3b82f6"}
+                      fill="#3b82f6"
+                      stroke={entry.isCurrent ? "white" : "transparent"}
+                      strokeWidth={entry.isCurrent ? 2 : 0}
                     />
                   ))}
                   <LabelList
@@ -248,7 +256,9 @@ export default function DashboardPage() {
                   {data.yearlyTrend.map((entry, index) => (
                     <Cell
                       key={`internal-${index}`}
-                      fill={entry.isCurrent ? "#15803d" : "#22c55e"}
+                      fill="#22c55e"
+                      stroke={entry.isCurrent ? "white" : "transparent"}
+                      strokeWidth={entry.isCurrent ? 2 : 0}
                     />
                   ))}
                   <LabelList

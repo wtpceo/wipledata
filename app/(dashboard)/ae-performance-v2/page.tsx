@@ -14,8 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Users, TrendingUp, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react"
+import { Users, TrendingUp, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronRight, DollarSign } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, LabelList } from "recharts"
 
 interface ExpiringClient {
   rowIndex: number
@@ -78,6 +79,8 @@ export default function AEPerformanceV2Page() {
   const [expiringClients, setExpiringClients] = useState<ExpiringClient[]>([])
   const [aeStats, setAeStats] = useState<AEStat[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
+  const [yearlyTrend, setYearlyTrend] = useState<any[]>([])
+  const [yearlyAeList, setYearlyAeList] = useState<string[]>([])
 
   // 미처리 연장 건
   const [allPendingClients, setAllPendingClients] = useState<ExpiringClient[]>([])
@@ -141,6 +144,13 @@ export default function AEPerformanceV2Page() {
         setSummary(data.summary || null)
       } else {
         alert('데이터를 불러오는데 실패했습니다.')
+      }
+
+      const yearlyResponse = await fetch('/api/ae-performance-v2/yearly-trend')
+      const yearlyData = await yearlyResponse.json()
+      if (yearlyResponse.ok) {
+        setYearlyTrend(yearlyData.yearlyTrend || [])
+        setYearlyAeList(yearlyData.aeList || [])
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -304,6 +314,12 @@ export default function AEPerformanceV2Page() {
     }).format(amount)
   }
 
+  const aeColors = [
+    '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+    '#06b6d4', '#ec4899', '#84cc16', '#6366f1', '#eab308',
+    '#14b8a6', '#f97316', '#d946ef', '#0ea5e9'
+  ]
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -334,6 +350,95 @@ export default function AEPerformanceV2Page() {
           </p>
         </div>
       </div>
+
+      {/* 연간 매출 트렌드 그래프 */}
+      {yearlyTrend && yearlyTrend.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>2026년 월별 영업부 실적 현황</CardTitle>
+            <CardDescription>
+              AE별 월 매출 추이 (현재 월 강조)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart
+                data={yearlyTrend}
+                margin={{ top: 24, right: 16, left: 8, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis
+                  tickFormatter={(v: number) =>
+                    v >= 100000000
+                      ? `${(v / 100000000).toFixed(1)}억`
+                      : v >= 10000000
+                        ? `${(v / 10000000).toFixed(0)}천만`
+                        : `${(v / 10000).toFixed(0)}만`
+                  }
+                  tick={{ fontSize: 11 }}
+                  width={56}
+                />
+                <Tooltip
+                  formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || payload.length === 0) return null
+                    const entry = yearlyTrend.find(d => d.label === label)
+                    const total = entry?.total ?? 0
+                    return (
+                      <div className="rounded-lg border bg-background p-3 shadow-md text-sm min-w-[180px]">
+                        <p className="font-semibold mb-2">{label}</p>
+                        {payload.map((p: any) => {
+                          const pct = total > 0 ? Math.round((p.value / total) * 100) : 0
+                          if (p.value === 0) return null
+                          return (
+                            <div key={p.dataKey} className="flex justify-between gap-4">
+                              <span style={{ color: p.fill }}>{p.name}</span>
+                              <span className="font-medium">
+                                {formatCurrency(p.value)}
+                                <span className="text-muted-foreground ml-1">({pct}%)</span>
+                              </span>
+                            </div>
+                          )
+                        })}
+                        <div className="flex justify-between gap-4 border-t mt-1 pt-1 font-semibold">
+                          <span>합계</span>
+                          <span>{formatCurrency(total)}</span>
+                        </div>
+                      </div>
+                    )
+                  }}
+                />
+                <Legend content={({ payload }) => (
+                  <div className="flex justify-center gap-6 text-sm mb-4 mt-2 flex-wrap">
+                    {yearlyAeList.map((aeName, index) => (
+                      <div key={`item-${index}`} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: aeColors[index % aeColors.length] }} />
+                        <span style={{ color: aeColors[index % aeColors.length], fontWeight: 'bold' }}>{aeName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )} />
+                {yearlyAeList.map((aeName, index) => {
+                  const isLast = index === yearlyAeList.length - 1
+                  return (
+                    <Bar key={aeName} dataKey={aeName} name={aeName} stackId="a" radius={isLast ? [4, 4, 0, 0] : [0, 0, 0, 0]} maxBarSize={40}>
+                      {yearlyTrend.map((entry, idx) => (
+                        <Cell
+                          key={`cell-${idx}`}
+                          fill={aeColors[index % aeColors.length]}
+                          stroke={entry.isCurrent ? "white" : "transparent"}
+                          strokeWidth={entry.isCurrent ? 2 : 0}
+                        />
+                      ))}
+                    </Bar>
+                  )
+                })}
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 월 선택 */}
       <Card>
