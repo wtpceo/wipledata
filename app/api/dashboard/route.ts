@@ -284,6 +284,61 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // 연간 매출 추이 (2026년 1월부터 실제 현재 월까지, 영업부/내근직 구분)
+    const nowDate = new Date()
+    const nowMonth = `${nowDate.getFullYear()}-${(nowDate.getMonth() + 1).toString().padStart(2, '0')}`
+    const yearlyTrend: { month: string; label: string; salesDept: number; internalDept: number; total: number; isCurrent: boolean }[] = []
+    const yearlyStart = new Date('2026-01-01')
+    const yearlyEndDate = new Date(nowMonth + '-01')
+
+    const filterByMonth = (targetMonth: string, targetMonthNum: number) => {
+      return sales.filter(sale => {
+        if (sale.department === '영업부') {
+          const im = sale.inputMonth
+          if (!im) return false
+          if (im.includes('-')) return im === targetMonth
+          if (im.includes('.')) return im.replace('.', '-') === targetMonth
+          if (im.length <= 2) return parseInt(im) === targetMonthNum
+          if (im.length === 6) return `${im.substring(0, 4)}-${im.substring(4, 6)}` === targetMonth
+          return false
+        } else {
+          if (!sale.date) return false
+          try {
+            let sd: Date | null = null
+            const ts = sale.date
+            if (ts.includes('T')) sd = new Date(ts)
+            else if (ts.includes('/')) {
+              const [m, d, y] = ts.split('/')
+              sd = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+            } else if (ts.includes('.')) sd = new Date(ts.replace(/\./g, '-'))
+            else if (ts.includes('-')) sd = new Date(ts)
+            if (sd && !isNaN(sd.getTime())) {
+              return `${sd.getFullYear()}-${(sd.getMonth() + 1).toString().padStart(2, '0')}` === targetMonth
+            }
+          } catch {}
+          return false
+        }
+      })
+    }
+
+    let iterDate = new Date(yearlyStart)
+    while (iterDate <= yearlyEndDate) {
+      const tm = `${iterDate.getFullYear()}-${(iterDate.getMonth() + 1).toString().padStart(2, '0')}`
+      const tmNum = iterDate.getMonth() + 1
+      const filtered = filterByMonth(tm, tmNum)
+      const salesDeptTotal = filtered.filter(s => s.department === '영업부').reduce((sum, s) => sum + s.totalAmount, 0)
+      const internalDeptTotal = filtered.filter(s => s.department !== '영업부').reduce((sum, s) => sum + s.totalAmount, 0)
+      yearlyTrend.push({
+        month: tm,
+        label: `${tmNum}월`,
+        salesDept: salesDeptTotal,
+        internalDept: internalDeptTotal,
+        total: salesDeptTotal + internalDeptTotal,
+        isCurrent: tm === nowMonth,
+      })
+      iterDate.setMonth(iterDate.getMonth() + 1)
+    }
+
     // 통계 계산
     const currentMonthTotal = currentMonthSales.reduce((sum, s) => sum + s.totalAmount, 0)
     const prevMonthTotal = prevMonthSales.reduce((sum, s) => sum + s.totalAmount, 0)
@@ -681,6 +736,7 @@ export async function GET(request: NextRequest) {
       weeklyInputPersonStats,
       weeklyDepartmentStats,
       monthlyTrend,
+      yearlyTrend,
       recentSales: currentMonthSales.slice(0, 10).map((sale, index) => ({
         id: `recent-${index}`,
         ...sale

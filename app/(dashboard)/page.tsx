@@ -4,6 +4,10 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, TrendingUp, Users, Package, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, LabelList, Cell
+} from "recharts"
 
 interface WeekGoals {
   sales: {
@@ -49,6 +53,7 @@ interface DashboardData {
   weeklyInputPersonStats?: WeeklyStatEntry[]
   weeklyDepartmentStats?: WeeklyStatEntry[]
   monthlyTrend: { month: string; amount: number }[]
+  yearlyTrend: { month: string; label: string; salesDept: number; internalDept: number; total: number; isCurrent: boolean }[]
   recentSales: any[]
 }
 
@@ -58,8 +63,6 @@ export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().substring(0, 7)
   )
-  const [showAllProducts, setShowAllProducts] = useState(false)
-  const [showAllInputPerson, setShowAllInputPerson] = useState(false)
   const [showAllDepartments, setShowAllDepartments] = useState(false)
   const [inputPersonWeek, setInputPersonWeek] = useState<number>(0) // 0 = 월별
   const [departmentWeek, setDepartmentWeek] = useState<number>(0) // 0 = 월별
@@ -91,9 +94,7 @@ export default function DashboardPage() {
       date.setMonth(date.getMonth() + 1)
     }
     setSelectedMonth(date.toISOString().substring(0, 7))
-    // 월 변경 시 더보기/주차 상태 초기화
-    setShowAllProducts(false)
-    setShowAllInputPerson(false)
+    // 월 변경 시 주차 상태 초기화
     setShowAllDepartments(false)
     setInputPersonWeek(0)
     setDepartmentWeek(0)
@@ -226,6 +227,124 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 연간 매출 트렌드 그래프 */}
+      {data?.yearlyTrend && data.yearlyTrend.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>2026년 월별 매출 현황</CardTitle>
+            <CardDescription>
+              영업부 / 내근직 부서별 월 매출 추이 (현재 월 강조)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart
+                data={data.yearlyTrend}
+                margin={{ top: 24, right: 16, left: 8, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis
+                  tickFormatter={(v: number) =>
+                    v >= 100000000
+                      ? `${(v / 100000000).toFixed(1)}억`
+                      : v >= 10000000
+                      ? `${(v / 10000000).toFixed(0)}천만`
+                      : `${(v / 10000).toFixed(0)}만`
+                  }
+                  tick={{ fontSize: 11 }}
+                  width={56}
+                />
+                <Tooltip
+                  formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || payload.length === 0) return null
+                    const entry = data.yearlyTrend.find(d => d.label === label)
+                    const total = entry?.total ?? 0
+                    return (
+                      <div className="rounded-lg border bg-background p-3 shadow-md text-sm min-w-[180px]">
+                        <p className="font-semibold mb-2">{label}</p>
+                        {payload.map((p: any) => {
+                          const pct = total > 0 ? Math.round((p.value / total) * 100) : 0
+                          return (
+                            <div key={p.dataKey} className="flex justify-between gap-4">
+                              <span style={{ color: p.fill }}>{p.name}</span>
+                              <span className="font-medium">
+                                {formatCurrency(p.value)}
+                                <span className="text-muted-foreground ml-1">({pct}%)</span>
+                              </span>
+                            </div>
+                          )
+                        })}
+                        <div className="flex justify-between gap-4 border-t mt-1 pt-1 font-semibold">
+                          <span>합계</span>
+                          <span>{formatCurrency(total)}</span>
+                        </div>
+                      </div>
+                    )
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="salesDept" name="영업부" stackId="a" radius={[0, 0, 0, 0]}>
+                  {data.yearlyTrend.map((entry, index) => (
+                    <Cell
+                      key={`sales-${index}`}
+                      fill={entry.isCurrent ? "#1d4ed8" : "#3b82f6"}
+                    />
+                  ))}
+                  <LabelList
+                    dataKey="salesDept"
+                    position="inside"
+                    content={(props: any) => {
+                      const { x, y, width, height, value, index } = props
+                      const total = data.yearlyTrend[index]?.total ?? 0
+                      const pct = total > 0 ? Math.round((value / total) * 100) : 0
+                      if (height < 22 || pct === 0) return null
+                      return (
+                        <text
+                          x={x + width / 2} y={y + height / 2}
+                          fill="white" textAnchor="middle" dominantBaseline="middle"
+                          fontSize={10} fontWeight={600}
+                        >
+                          {pct}%
+                        </text>
+                      )
+                    }}
+                  />
+                </Bar>
+                <Bar dataKey="internalDept" name="내근직" stackId="a" radius={[4, 4, 0, 0]}>
+                  {data.yearlyTrend.map((entry, index) => (
+                    <Cell
+                      key={`internal-${index}`}
+                      fill={entry.isCurrent ? "#15803d" : "#22c55e"}
+                    />
+                  ))}
+                  <LabelList
+                    dataKey="internalDept"
+                    position="inside"
+                    content={(props: any) => {
+                      const { x, y, width, height, value, index } = props
+                      const total = data.yearlyTrend[index]?.total ?? 0
+                      const pct = total > 0 ? Math.round((value / total) * 100) : 0
+                      if (height < 22 || pct === 0) return null
+                      return (
+                        <text
+                          x={x + width / 2} y={y + height / 2}
+                          fill="white" textAnchor="middle" dominantBaseline="middle"
+                          fontSize={10} fontWeight={600}
+                        >
+                          {pct}%
+                        </text>
+                      )
+                    }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 1주차 목표 섹션 */}
       {data?.week1Goals && (
@@ -632,7 +751,7 @@ export default function DashboardPage() {
           <CardContent>
             {data?.productSales && data.productSales.length > 0 ? (
               <div className="space-y-3">
-                {(showAllProducts ? data.productSales : data.productSales.slice(0, 5)).map((product, index) => (
+                {data.productSales.map((product, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-primary" />
@@ -648,16 +767,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))}
-                {data.productSales.length > 5 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => setShowAllProducts(!showAllProducts)}
-                  >
-                    {showAllProducts ? '접기' : `+${data.productSales.length - 5}개 더 보기`}
-                  </Button>
-                )}
               </div>
             ) : (
               <div className="h-[250px] flex items-center justify-center text-muted-foreground">
@@ -689,7 +798,7 @@ export default function DashboardPage() {
               }).map(tab => (
                 <button
                   key={tab.value}
-                  onClick={() => { setInputPersonWeek(tab.value); setShowAllInputPerson(false) }}
+                  onClick={() => { setInputPersonWeek(tab.value) }}
                   className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
                     inputPersonWeek === tab.value
                       ? 'bg-primary text-primary-foreground border-primary'
@@ -707,7 +816,7 @@ export default function DashboardPage() {
               const total = list.reduce((s, p) => s + p.amount, 0)
               return list.length > 0 ? (
                 <div className="space-y-3">
-                  {(showAllInputPerson ? list : list.slice(0, 5)).map((person, index) => (
+                  {list.map((person, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-primary" />
@@ -721,16 +830,6 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ))}
-                  {list.length > 5 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => setShowAllInputPerson(!showAllInputPerson)}
-                    >
-                      {showAllInputPerson ? '접기' : `+${list.length - 5}명 더 보기`}
-                    </Button>
-                  )}
                 </div>
               ) : (
                 <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
