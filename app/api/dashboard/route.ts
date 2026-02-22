@@ -284,12 +284,12 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // 연간 매출 추이 (2026년 1월부터 실제 현재 월까지, 영업부/내근직 구분)
+    // 연간 매출 추이 (2026년 1월부터 12월까지, 영업부/내근직 구분)
     const nowDate = new Date()
     const nowMonth = `${nowDate.getFullYear()}-${(nowDate.getMonth() + 1).toString().padStart(2, '0')}`
     const yearlyTrend: { month: string; label: string; salesDept: number; internalDept: number; total: number; isCurrent: boolean }[] = []
     const yearlyStart = new Date('2026-01-01')
-    const yearlyEndDate = new Date(nowMonth + '-01')
+    const yearlyEndDate = new Date('2026-12-01')
 
     const filterByMonth = (targetMonth: string, targetMonthNum: number) => {
       return sales.filter(sale => {
@@ -315,7 +315,7 @@ export async function GET(request: NextRequest) {
             if (sd && !isNaN(sd.getTime())) {
               return `${sd.getFullYear()}-${(sd.getMonth() + 1).toString().padStart(2, '0')}` === targetMonth
             }
-          } catch {}
+          } catch { }
           return false
         }
       })
@@ -497,7 +497,7 @@ export async function GET(request: NextRequest) {
           if (saleDate && !isNaN(saleDate.getTime())) {
             return saleDate >= weekStart && saleDate <= weekEnd
           }
-        } catch (error) {}
+        } catch (error) { }
         return false
       }).reduce((sum, s) => sum + s.totalAmount, 0)
 
@@ -523,7 +523,7 @@ export async function GET(request: NextRequest) {
           if (saleDate && !isNaN(saleDate.getTime())) {
             return saleDate >= weekStart && saleDate <= weekEnd
           }
-        } catch (error) {}
+        } catch (error) { }
         return false
       }).reduce((sum, s) => sum + s.totalAmount, 0)
 
@@ -556,7 +556,7 @@ export async function GET(request: NextRequest) {
           } else if (contractDate.includes('-')) {
             saleDate = new Date(contractDate)
           }
-        } catch {}
+        } catch { }
       } else {
         const timestamp = sale.date
         if (!timestamp) return 0
@@ -574,7 +574,7 @@ export async function GET(request: NextRequest) {
           } else if (timestamp.includes('-')) {
             saleDate = new Date(timestamp)
           }
-        } catch {}
+        } catch { }
       }
       if (!saleDate || isNaN(saleDate.getTime())) return 0
       if (saleDate >= week1Start && saleDate <= week1End) return 1

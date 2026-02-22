@@ -250,8 +250,8 @@ export default function DashboardPage() {
                     v >= 100000000
                       ? `${(v / 100000000).toFixed(1)}억`
                       : v >= 10000000
-                      ? `${(v / 10000000).toFixed(0)}천만`
-                      : `${(v / 10000).toFixed(0)}만`
+                        ? `${(v / 10000000).toFixed(0)}천만`
+                        : `${(v / 10000).toFixed(0)}만`
                   }
                   tick={{ fontSize: 11 }}
                   width={56}
@@ -285,8 +285,17 @@ export default function DashboardPage() {
                     )
                   }}
                 />
-                <Legend />
-                <Bar dataKey="salesDept" name="영업부" stackId="a" radius={[0, 0, 0, 0]}>
+                <Legend content={({ payload }) => (
+                  <div className="flex justify-center gap-6 text-sm mb-4 mt-2">
+                    {payload?.map((entry, index) => (
+                      <div key={`item-${index}`} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                        <span style={{ color: entry.color, fontWeight: 'bold' }}>{entry.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )} />
+                <Bar dataKey="salesDept" name="영업부" stackId="a" radius={[0, 0, 0, 0]} maxBarSize={40}>
                   {data.yearlyTrend.map((entry, index) => (
                     <Cell
                       key={`sales-${index}`}
@@ -313,7 +322,7 @@ export default function DashboardPage() {
                     }}
                   />
                 </Bar>
-                <Bar dataKey="internalDept" name="내근직" stackId="a" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="internalDept" name="내무부" stackId="a" radius={[4, 4, 0, 0]} maxBarSize={40}>
                   {data.yearlyTrend.map((entry, index) => (
                     <Cell
                       key={`internal-${index}`}
@@ -799,11 +808,10 @@ export default function DashboardPage() {
                 <button
                   key={tab.value}
                   onClick={() => { setInputPersonWeek(tab.value) }}
-                  className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                    inputPersonWeek === tab.value
+                  className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${inputPersonWeek === tab.value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -863,11 +871,10 @@ export default function DashboardPage() {
                 <button
                   key={tab.value}
                   onClick={() => { setDepartmentWeek(tab.value); setShowAllDepartments(false) }}
-                  className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                    departmentWeek === tab.value
+                  className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${departmentWeek === tab.value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
