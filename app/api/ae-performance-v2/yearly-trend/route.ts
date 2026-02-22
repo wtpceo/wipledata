@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
             const isCurrentMonth = monthData.month === nowMonth
             const res: any = {
                 month: monthData.month,
-                label: isCurrentMonth ? `🔽 ${monthData.label}` : monthData.label,
+                label: monthData.label,
                 total: monthData.total,
                 isCurrent: isCurrentMonth
             }

@@ -331,7 +331,7 @@ export async function GET(request: NextRequest) {
       const isCurrentMonth = tm === nowMonth
       yearlyTrend.push({
         month: tm,
-        label: isCurrentMonth ? `🔽 ${tmNum}월` : `${tmNum}월`,
+        label: `${tmNum}월`,
         salesDept: salesDeptTotal,
         internalDept: internalDeptTotal,
         total: salesDeptTotal + internalDeptTotal,

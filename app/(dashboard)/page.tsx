@@ -263,6 +263,27 @@ export default function DashboardPage() {
                   ))}
                   <LabelList
                     dataKey="internalDept"
+                    content={(props: any) => {
+                      const { x, y, width, index } = props
+                      const entry = data.yearlyTrend[index]
+                      if (entry?.isCurrent) {
+                        return (
+                          <g>
+                            <text
+                              x={x + width / 2} y={y - 12}
+                              fill="#22c55e" textAnchor="middle" dominantBaseline="middle"
+                              fontSize={24}
+                            >
+                              &#x25BC;
+                            </text>
+                          </g>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <LabelList
+                    dataKey="internalDept"
                     position="inside"
                     content={(props: any) => {
                       const { x, y, width, height, value, index } = props

@@ -431,6 +431,29 @@ export default function AEPerformanceV2Page() {
                           strokeWidth={entry.isCurrent ? 2 : 0}
                         />
                       ))}
+                      {isLast && (
+                        <LabelList
+                          dataKey={aeName}
+                          content={(props: any) => {
+                            const { x, y, width, index: dIndex } = props
+                            const entry = yearlyTrend[dIndex]
+                            if (entry?.isCurrent) {
+                              return (
+                                <g>
+                                  <text
+                                    x={x + width / 2} y={y - 12}
+                                    fill="#22c55e" textAnchor="middle" dominantBaseline="middle"
+                                    fontSize={24}
+                                  >
+                                    &#x25BC;
+                                  </text>
+                                </g>
+                              )
+                            }
+                            return null
+                          }}
+                        />
+                      )}
                     </Bar>
                   )
                 })}
