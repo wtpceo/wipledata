@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 현재 월 데이터 필터링
-    // 영업부: S열(입력 월) 기준, 내근직: A열(타임스탬프) 기준
+    // 영업부: S열(입력 월) 기준, 내무부: A열(타임스탬프) 기준
     const currentMonthSales = sales.filter(sale => {
       // 영업부는 S열(입력 월) 사용
       if (sale.department === '영업부') {
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
         }
         return false
       } else {
-        // 내근직(영업부 제외)은 A열(타임스탬프) 사용
+        // 내무부(영업부 제외)은 A열(타임스탬프) 사용
         if (!sale.date) return false
 
         const timestamp = sale.date
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 이전 월 데이터 필터링
-    // 영업부: S열(입력 월) 기준, 내근직: A열(타임스탬프) 기준
+    // 영업부: S열(입력 월) 기준, 내무부: A열(타임스탬프) 기준
     const prevMonthSales = sales.filter(sale => {
       // 영업부는 S열(입력 월) 사용
       if (sale.department === '영업부') {
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
         }
         return false
       } else {
-        // 내근직(영업부 제외)은 A열(타임스탬프) 사용
+        // 내무부(영업부 제외)은 A열(타임스탬프) 사용
         if (!sale.date) return false
 
         const timestamp = sale.date
@@ -235,12 +235,12 @@ export async function GET(request: NextRequest) {
     const renewals = currentMonthSales.filter(s => s.contractType === '연장').length
     const referrals = currentMonthSales.filter(s => s.contractType === '기존고객 소개').length
 
-    // 부서별 매출 집계 (영업부 / 내근직으로 통합)
+    // 부서별 매출 집계 (영업부 / 내무부으로 통합)
     const departmentSales: { [key: string]: number } = {}
     currentMonthSales.forEach(sale => {
       if (sale.department) {
-        // 영업부는 그대로, 나머지는 모두 "내근직"으로 통합
-        const deptName = sale.department === '영업부' ? '영업부' : '내근직'
+        // 영업부는 그대로, 나머지는 모두 "내무부"으로 통합
+        const deptName = sale.department === '영업부' ? '영업부' : '내무부'
         departmentSales[deptName] = (departmentSales[deptName] || 0) + sale.totalAmount
       }
     })
@@ -284,7 +284,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // 연간 매출 추이 (2026년 1월부터 12월까지, 영업부/내근직 구분)
+    // 연간 매출 추이 (2026년 1월부터 12월까지, 영업부/내무부 구분)
     const nowDate = new Date()
     const nowMonth = `${nowDate.getFullYear()}-${(nowDate.getMonth() + 1).toString().padStart(2, '0')}`
     const yearlyTrend: { month: string; label: string; salesDept: number; internalDept: number; total: number; isCurrent: boolean }[] = []
@@ -328,13 +328,14 @@ export async function GET(request: NextRequest) {
       const filtered = filterByMonth(tm, tmNum)
       const salesDeptTotal = filtered.filter(s => s.department === '영업부').reduce((sum, s) => sum + s.totalAmount, 0)
       const internalDeptTotal = filtered.filter(s => s.department !== '영업부').reduce((sum, s) => sum + s.totalAmount, 0)
+      const isCurrentMonth = tm === nowMonth
       yearlyTrend.push({
         month: tm,
-        label: `${tmNum}월`,
+        label: isCurrentMonth ? `🔽 ${tmNum}월` : `${tmNum}월`,
         salesDept: salesDeptTotal,
         internalDept: internalDeptTotal,
         total: salesDeptTotal + internalDeptTotal,
-        isCurrent: tm === nowMonth,
+        isCurrent: isCurrentMonth,
       })
       iterDate.setMonth(iterDate.getMonth() + 1)
     }
@@ -501,7 +502,7 @@ export async function GET(request: NextRequest) {
         return false
       }).reduce((sum, s) => sum + s.totalAmount, 0)
 
-      // 내근직 매출 (A열의 타임스탬프 기준)
+      // 내무부 매출 (A열의 타임스탬프 기준)
       const internalDept = sales.filter(sale => {
         if (!sale.date || sale.department === '영업부') return false
         const timestamp = sale.date
@@ -538,7 +539,7 @@ export async function GET(request: NextRequest) {
     const week5Sales = calculateWeekSales(week5Start, week5End)
 
     // 주차별 입력자/부서 실적 계산
-    // currentMonthSales 기반: 영업부는 O열(계약일), 내근직은 A열(timestamp) 기준으로 주차 배분
+    // currentMonthSales 기반: 영업부는 O열(계약일), 내무부은 A열(timestamp) 기준으로 주차 배분
     const getWeekForSale = (sale: any): number => {
       let saleDate: Date | null = null
       if (sale.department === '영업부') {
@@ -595,7 +596,7 @@ export async function GET(request: NextRequest) {
         weeklyPersonMaps[week][sale.inputPerson] = (weeklyPersonMaps[week][sale.inputPerson] || 0) + sale.totalAmount
       }
       if (sale.department) {
-        const deptName = sale.department === '영업부' ? '영업부' : '내근직'
+        const deptName = sale.department === '영업부' ? '영업부' : '내무부'
         weeklyDeptMaps[week][deptName] = (weeklyDeptMaps[week][deptName] || 0) + sale.totalAmount
       }
     })

@@ -355,7 +355,7 @@ export default function AEPerformanceV2Page() {
       {yearlyTrend && yearlyTrend.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>2026년 월별 내근직 실적 현황</CardTitle>
+            <CardTitle>2026년 월별 내무부 실적 현황</CardTitle>
             <CardDescription>
               AE별 월 매출 추이 (현재 월 강조)
             </CardDescription>

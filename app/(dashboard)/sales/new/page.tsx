@@ -191,7 +191,7 @@ export default function NewSalePage() {
               >
                 <option value="">부서를 선택하세요</option>
                 <option value="영업부">영업부</option>
-                <option value="내근직">내근직</option>
+                <option value="내무부">내무부</option>
                 <option value="기타">기타</option>
               </select>
             </div>

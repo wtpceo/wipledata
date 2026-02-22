@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         if (s.department === '영업부') {
           return s.inputYearMonth === month
         } else {
-          // 내근직(영업부 제외)은 A열(timestamp) 사용
+          // 내무부(영업부 제외)은 A열(timestamp) 사용
           if (!s.timestamp) return false
 
           try {

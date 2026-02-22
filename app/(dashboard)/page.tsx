@@ -408,7 +408,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">내근직 1주차 목표 달성률</CardTitle>
+              <CardTitle className="text-sm font-medium">내무부 1주차 목표 달성률</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -487,7 +487,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">내근직 2주차 목표 달성률</CardTitle>
+              <CardTitle className="text-sm font-medium">내무부 2주차 목표 달성률</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -566,7 +566,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">내근직 3주차 목표 달성률</CardTitle>
+              <CardTitle className="text-sm font-medium">내무부 3주차 목표 달성률</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -645,7 +645,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">내근직 4주차 목표 달성률</CardTitle>
+              <CardTitle className="text-sm font-medium">내무부 4주차 목표 달성률</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -724,7 +724,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">내근직 5주차 목표 달성률</CardTitle>
+              <CardTitle className="text-sm font-medium">내무부 5주차 목표 달성률</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>

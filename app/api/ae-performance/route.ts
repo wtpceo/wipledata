@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } else {
-          // 내근직은 A열(timestamp) 사용
+          // 내무부은 A열(timestamp) 사용
           const timestamp = row[0] || ''
           const saleDate = parseDate(timestamp)
           if (saleDate && !isNaN(saleDate.getTime())) {
