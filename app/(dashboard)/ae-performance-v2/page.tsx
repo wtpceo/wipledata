@@ -17,6 +17,14 @@ import {
 import { Users, TrendingUp, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronRight, DollarSign } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, LabelList } from "recharts"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 interface ExpiringClient {
   rowIndex: number
@@ -369,15 +377,9 @@ export default function AEPerformanceV2Page() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis
-                  tickFormatter={(v: number) =>
-                    v >= 100000000
-                      ? `${(v / 100000000).toFixed(1)}억`
-                      : v >= 10000000
-                        ? `${(v / 10000000).toFixed(0)}천만`
-                        : `${(v / 10000).toFixed(0)}만`
-                  }
+                  tickFormatter={(v: number) => new Intl.NumberFormat('ko-KR').format(v)}
                   tick={{ fontSize: 11 }}
-                  width={56}
+                  width={80}
                 />
                 <Tooltip
                   formatter={(value: number, name: string) => [formatCurrency(value), name]}
@@ -462,6 +464,60 @@ export default function AEPerformanceV2Page() {
           </CardContent>
         </Card>
       )}
+
+      {/* 담당자별 월별 매출 및 연장율 */}
+      {yearlyAeList.length > 0 && yearlyTrend.length > 0 && (() => {
+        const tableData = yearlyAeList.map(aeName => {
+          const monthlySales = yearlyTrend.map(monthData => monthData[aeName] || 0)
+          const totalSales = monthlySales.reduce((sum, val) => sum + val, 0)
+          const stat = aeStats.find(s => s.aeName === aeName)
+          const renewalRate = stat ? stat.renewalRate : 0
+          return { aeName, monthlySales, totalSales, renewalRate }
+        }).sort((a, b) => b.totalSales - a.totalSales)
+
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>담당자별 연간 매출 및 연장율 현황</CardTitle>
+              <CardDescription>2026년 1월 ~ 12월 기준 누적 매출액순 정렬</CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[100px]">담당자</TableHead>
+                    {yearlyTrend.map((m) => (
+                      <TableHead key={m.month} className="text-right whitespace-nowrap">
+                        {m.label.replace('🔽 ', '')}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right font-bold whitespace-nowrap">총 매출</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">연장율(당월)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableData.map((row) => (
+                    <TableRow key={row.aeName}>
+                      <TableCell className="font-medium whitespace-nowrap">{row.aeName}</TableCell>
+                      {row.monthlySales.map((sales, idx) => (
+                        <TableCell key={idx} className="text-right whitespace-nowrap">
+                          {sales > 0 ? formatCurrency(sales) : '-'}
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-right font-bold whitespace-nowrap text-blue-600">
+                        {formatCurrency(row.totalSales)}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        {row.renewalRate.toFixed(1)}%
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* 월 선택 */}
       <Card>

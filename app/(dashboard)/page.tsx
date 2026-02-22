@@ -109,9 +109,7 @@ export default function DashboardPage() {
     return new Intl.NumberFormat('ko-KR', {
       style: 'currency',
       currency: 'KRW',
-      notation: amount >= 100000000 ? 'compact' : 'standard',
-      maximumFractionDigits: amount >= 100000000 ? 1 : 0,
-      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount)
   }
 
@@ -168,15 +166,9 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis
-                  tickFormatter={(v: number) =>
-                    v >= 100000000
-                      ? `${(v / 100000000).toFixed(1)}억`
-                      : v >= 10000000
-                        ? `${(v / 10000000).toFixed(0)}천만`
-                        : `${(v / 10000).toFixed(0)}만`
-                  }
+                  tickFormatter={(v: number) => new Intl.NumberFormat('ko-KR').format(v)}
                   tick={{ fontSize: 11 }}
-                  width={56}
+                  width={80}
                 />
                 <Tooltip
                   formatter={(value: number, name: string) => [formatCurrency(value), name]}
