@@ -502,7 +502,7 @@ export default function AEPerformanceV2Page() {
                           {sales > 0 ? formatCurrency(sales) : '-'}
                         </TableCell>
                       ))}
-                      <TableCell className="text-right font-bold whitespace-nowrap text-blue-600">
+                      <TableCell className="text-right font-bold whitespace-nowrap text-orange-500">
                         {formatCurrency(row.totalSales)}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
