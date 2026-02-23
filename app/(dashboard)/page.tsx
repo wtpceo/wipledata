@@ -69,6 +69,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData(selectedMonth)
+    // 1분(60초)마다 데이터 자동 갱신하여 게시판에 반영
+    const interval = setInterval(() => {
+      fetchDashboardData(selectedMonth)
+    }, 60000)
+    return () => clearInterval(interval)
   }, [selectedMonth])
 
   const fetchDashboardData = async (month: string) => {

@@ -40,6 +40,7 @@ const navigationConfig = [
     roles: ['ADMIN', 'MANAGER', 'STAFF'], // 모든 역할
     items: [
       { name: '전체 현황', href: '/', icon: LayoutDashboard },
+      { name: '매출 자료', href: '/sales-feed', icon: Receipt },
       // { name: 'KPI 대시보드', href: '/kpi', icon: BarChart3 },
       { name: '영업 실적', href: '/sales-dashboard', icon: TrendingUp },
       { name: '담당자별 실적', href: '/staff-performance', icon: Users },
@@ -230,9 +231,8 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                           key={item.name}
                           href={item.href}
                           onClick={onClose}
-                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground ml-2 ${
-                            isActive ? 'bg-accent' : ''
-                          }`}
+                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground ml-2 ${isActive ? 'bg-accent' : ''
+                            }`}
                         >
                           <Icon className="h-4 w-4" />
                           {item.name}

@@ -738,7 +738,7 @@ export async function GET(request: NextRequest) {
       weeklyDepartmentStats,
       monthlyTrend,
       yearlyTrend,
-      recentSales: currentMonthSales.slice(0, 10).map((sale, index) => ({
+      recentSales: [...currentMonthSales].reverse().slice(0, 20).map((sale, index) => ({
         id: `recent-${index}`,
         ...sale
       }))
