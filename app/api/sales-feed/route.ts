@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
                 const consultationContent = row[11] || ''
                 const specialNotes = row[12] || ''
 
-                const contractDate = row[14] || ''
+                // O열 계약일자 대신 A열 timestamp의 날짜(T 앞부분)를 계약일로 직관적으로 사용
+                const contractDate = timestamp ? timestamp.split('T')[0] : (row[14] || '')
                 const inputMonth = row[18] || ''
 
                 return {
