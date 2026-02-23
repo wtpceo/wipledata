@@ -21,7 +21,26 @@ export async function GET(request: NextRequest) {
                 const approvalNum = row[9] || ''
                 const consultationContent = row[11] || ''
                 const specialNotes = row[12] || ''
-                const contractDate = row[14] || ''
+
+                let contractDate = row[14] || ''
+                // YYYY. MM. DD 또는 YYYY.MM.DD 형식을 YYYY-MM-DD로 변환
+                if (contractDate.includes('.')) {
+                    const parts = contractDate.split('.').map((p: string) => p.trim()).filter(Boolean);
+                    if (parts.length >= 3) {
+                        contractDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                    }
+                } else if (contractDate.includes('/')) {
+                    const parts = contractDate.split('/').map((p: string) => p.trim()).filter(Boolean);
+                    if (parts.length >= 3) {
+                        // MM/DD/YYYY 또는 YYYY/MM/DD 대응
+                        if (parts[0].length === 4) {
+                            contractDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                        } else if (parts[2].length === 4) {
+                            contractDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                        }
+                    }
+                }
+
                 const inputMonth = row[18] || ''
 
                 return {
