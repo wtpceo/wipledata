@@ -465,6 +465,7 @@ export default function NewSalePage() {
                   <option value="카드 결제">카드 결제</option>
                   <option value="계좌 이체">계좌 이체</option>
                   <option value="현금 수령">현금 수령</option>
+                  <option value="입금예정">입금예정</option>
                   <option value="미결제">미결제</option>
                   <option value="기타">기타</option>
                 </select>

@@ -73,9 +73,14 @@ export async function GET(request: NextRequest) {
       const department = row[1] || '' // B열: 부서
       const marketingProduct = row[5] || '' // F열: 마케팅 매체 상품명
       const inputPerson = row[2] || '' // C열: 입력자
+      const paymentMethod = row[8] || '' // I열: 결제 방식
+
+      // 입금예정인 경우 금액 0으로 처리 (입금확인 댓글 달리면 결제방식이 변경됨)
+      const isPaymentPending = paymentMethod === '입금예정'
 
       // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
-      const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+      const calculatedAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+      const actualAmount = isPaymentPending ? 0 : calculatedAmount
 
       // 다른 필요한 데이터
       return {
@@ -87,6 +92,7 @@ export async function GET(request: NextRequest) {
         productName: marketingProduct,
         contractMonths: parseInt(row[6]) || 0,
         totalAmount: actualAmount,
+        paymentMethod: paymentMethod,
         salesPerson: row[9] || '',
         inputMonth: monthValue,
         rawRow: row

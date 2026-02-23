@@ -28,7 +28,23 @@ export async function POST(request: NextRequest) {
         // Ensure we start writing back to the exact same cell M{rowIndex}
         await updateSheet(cellRange, [[finalNotes]])
 
-        return NextResponse.json({ success: true })
+        // 입금확인 키워드 감지: 댓글에 "입금확인"이 포함되면 결제방식을 업데이트
+        let paymentUpdated = false
+        if (replyText.includes('입금확인')) {
+            // I열(인덱스 8): 결제 방식 읽기
+            const paymentCellRange = `원본데이터!I${rowIndex}`
+            const paymentData = await readFromSheet(paymentCellRange)
+            const currentPaymentMethod = paymentData && paymentData[0] && paymentData[0][0] ? paymentData[0][0] : ''
+
+            // 입금예정인 경우에만 입금확인으로 변경
+            if (currentPaymentMethod === '입금예정') {
+                await updateSheet(paymentCellRange, [['입금확인']])
+                paymentUpdated = true
+                console.log(`✅ 입금확인 처리: row ${rowIndex}, 결제방식 '입금예정' → '입금확인'`)
+            }
+        }
+
+        return NextResponse.json({ success: true, paymentUpdated })
     } catch (error) {
         console.error('Failed to post reply', error)
         return NextResponse.json({ error: 'Failed to post reply' }, { status: 500 })

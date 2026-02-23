@@ -987,6 +987,7 @@ export default function AEPerformanceV2Page() {
                       <SelectItem value="카드 결제">카드 결제</SelectItem>
                       <SelectItem value="계좌 이체">계좌 이체</SelectItem>
                       <SelectItem value="현금 수령">현금 수령</SelectItem>
+                      <SelectItem value="입금예정">입금예정</SelectItem>
                       <SelectItem value="미결제">미결제</SelectItem>
                       <SelectItem value="기타">기타</SelectItem>
                     </SelectContent>

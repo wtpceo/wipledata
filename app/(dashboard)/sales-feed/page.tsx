@@ -207,7 +207,14 @@ export default function SalesFeedPage() {
 
                                                 <div className="text-[15px] bg-[#f8fafc] px-4 py-3 rounded-md border border-slate-100 inline-block w-full">
                                                     {sale.contractPeriod ? <span className="mr-4"><b>계약기간:</b> {sale.contractPeriod}</span> : ''}
-                                                    <span className={sale.totalAmount > 0 ? 'text-blue-700 font-medium' : ''}><b>금액:</b> {formatCurrency(sale.totalAmount)} {sale.paymentMethod ? ` / ${sale.paymentMethod}` : ''}</span>
+                                                    <span className={sale.totalAmount > 0 ? 'text-blue-700 font-medium' : ''}><b>금액:</b> {formatCurrency(sale.totalAmount)}</span>
+                                                    {sale.paymentMethod === '입금예정' ? (
+                                                        <span className="ml-2 text-orange-600 bg-orange-50 px-2 py-0.5 rounded text-xs font-semibold border border-orange-200">⏳ 입금예정</span>
+                                                    ) : sale.paymentMethod === '입금확인' ? (
+                                                        <span className="ml-2 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold border border-emerald-200">✅ 입금확인</span>
+                                                    ) : sale.paymentMethod ? (
+                                                        <span className="ml-2 text-gray-500"> / {sale.paymentMethod}</span>
+                                                    ) : null}
                                                 </div>
 
                                                 {sale.specialNotes && (

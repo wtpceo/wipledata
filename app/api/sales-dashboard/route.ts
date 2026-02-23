@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
     const dateIndex = headers.findIndex((h: string) =>
       h?.includes('계약날짜') || h?.includes('Contract_Date') || h?.includes('날짜') || h?.toLowerCase().includes('date')
     )
+    const paymentMethodIndex = headers.findIndex((h: string) =>
+      h?.includes('결제 방식') || h?.includes('결제방식') || h?.toLowerCase().includes('payment')
+    )
 
     console.log('Column indices - Dept:', departmentIndex, 'InputPerson:', inputPersonIndex,
                 'Amount:', amountIndex, 'OutsourcingCost:', outsourcingCostIndex, 'Client:', clientIndex, 'Date:', dateIndex)
@@ -90,6 +93,10 @@ export async function GET(request: NextRequest) {
       const contractAmount = parseFloat(contractAmountStr) || 0
       const outsourcingCostStr = row[outsourcingCostIndex]?.toString().replace(/[^0-9.-]/g, '') || '0'
       const outsourcingCost = parseFloat(outsourcingCostStr) || 0
+      const paymentMethod = paymentMethodIndex >= 0 ? row[paymentMethodIndex]?.trim() || '' : ''
+
+      // 입금예정인 경우 금액 0으로 처리
+      if (paymentMethod === '입금예정') return
 
       // 영업부는 총계약금액 - 외주비
       const amount = contractAmount - outsourcingCost
