@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFromSheet, updateSheet } from '@/lib/google-sheets'
+import { notifyNewReply } from '@/lib/solapi'
 
 export async function POST(request: NextRequest) {
     try {
@@ -43,6 +44,11 @@ export async function POST(request: NextRequest) {
                 console.log(`✅ 입금확인 처리: row ${rowIndex}, 결제방식 '입금예정' → '입금확인'`)
             }
         }
+
+        // 댓글 알림 발송 (비동기, 실패해도 댓글 등록은 성공)
+        const clientData = await readFromSheet(`원본데이터!E${rowIndex}`)
+        const clientName = clientData && clientData[0] && clientData[0][0] ? clientData[0][0] : ''
+        notifyNewReply({ authorName, clientName, replyText })
 
         return NextResponse.json({ success: true, paymentUpdated })
     } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeToSheet, readFromSheet, SHEETS } from '@/lib/google-sheets'
 import { normalizeStaffName } from '@/lib/normalize-staff-name'
+import { notifyNewSale } from '@/lib/solapi'
 
 // GET: 매출 데이터 조회
 export async function GET(request: NextRequest) {
@@ -220,6 +221,16 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error writing to sheets:', writeError)
       throw writeError
     }
+
+    // 알림 발송 (비동기, 실패해도 매출 등록은 성공)
+    notifyNewSale({
+      inputPerson,
+      department,
+      clientName,
+      productName: finalProductName,
+      totalAmount,
+      salesType,
+    })
 
     return NextResponse.json({
       success: true,
