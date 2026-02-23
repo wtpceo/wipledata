@@ -210,20 +210,78 @@ export default function SalesFeedPage() {
                                                     <span className={sale.totalAmount > 0 ? 'text-blue-700 font-medium' : ''}><b>금액:</b> {formatCurrency(sale.totalAmount)} {sale.paymentMethod ? ` / ${sale.paymentMethod}` : ''}</span>
                                                 </div>
 
-                                                {(sale.consultationContent || sale.specialNotes) && (
+                                                {sale.specialNotes && (
                                                     <div className="mt-4 pt-4 border-t border-dashed border-gray-200 text-[14.5px] text-gray-700">
-                                                        {sale.consultationContent && (
-                                                            <div className="mb-3">
-                                                                <span className="font-semibold text-gray-600 flex items-center gap-1.5"><Package className="w-4 h-4" /> 광고주 상담내용</span>
-                                                                <div className="mt-1.5 pl-5 whitespace-pre-wrap leading-snug">{sale.consultationContent}</div>
+                                                        <div className="mt-3 text-red-800 bg-red-50/50 p-3 rounded-md border border-red-50">
+                                                            <span className="font-semibold text-red-600 flex items-center gap-1.5">🚨 입금현황 및 특이사항:</span>
+                                                            <div className="mt-2 pl-1 whitespace-pre-wrap leading-[1.6] font-medium text-red-900/90">
+                                                                {/* 기본 특이사항과 덧글을 분리해서 렌더링 */}
+                                                                {(() => {
+                                                                    const notesString = sale.specialNotes as string;
+                                                                    const replyRegex = /\n\n\[\u21aa (.*?) 님의 덧글 - (.*?)\]\n([\s\S]*?)(?=\n\n\[\u21aa|$)/g;
+
+                                                                    // 특이사항 본문 (첫 덧글 이전 텍스트)
+                                                                    const mainTextMatch = notesString.split('\n\n[↪')[0];
+                                                                    const mainText = mainTextMatch ? mainTextMatch.trim() : notesString;
+
+                                                                    // 덧글 매칭
+                                                                    const replyMatches = [...notesString.matchAll(replyRegex)];
+
+                                                                    const deleteReply = async (replyString: string, rowIndex: number) => {
+                                                                        if (!confirm('이 덧글을 삭제하시겠습니까?')) return;
+                                                                        try {
+                                                                            const response = await fetch('/api/sales-feed/reply/delete', {
+                                                                                method: 'POST',
+                                                                                headers: { 'Content-Type': 'application/json' },
+                                                                                body: JSON.stringify({ rowIndex, replyString })
+                                                                            });
+                                                                            if (response.ok) {
+                                                                                await fetchSalesFeed();
+                                                                            } else {
+                                                                                alert('삭제에 실패했습니다.');
+                                                                            }
+                                                                        } catch (error) {
+                                                                            alert('오류가 발생했습니다.');
+                                                                        }
+                                                                    };
+
+                                                                    return (
+                                                                        <>
+                                                                            <div>{mainText}</div>
+                                                                            {replyMatches.length > 0 && (
+                                                                                <div className="mt-4 space-y-3">
+                                                                                    {replyMatches.map((match, i) => {
+                                                                                        const fullMatchString = match[0];
+                                                                                        const author = match[1];
+                                                                                        const date = match[2];
+                                                                                        const content = match[3];
+                                                                                        return (
+                                                                                            <div key={i} className="flex gap-2">
+                                                                                                <div className="bg-white/80 border border-red-100 rounded-lg p-3 flex-1 shadow-sm relative group">
+                                                                                                    <div className="flex justify-between items-start mb-1">
+                                                                                                        <span className="font-bold text-gray-700 text-[13px]">{author}</span>
+                                                                                                        <span className="text-gray-400 text-[11px]">{date}</span>
+                                                                                                    </div>
+                                                                                                    <div className="text-gray-800 text-[14px] whitespace-pre-wrap">{content.trim()}</div>
+
+                                                                                                    <button
+                                                                                                        onClick={() => deleteReply(fullMatchString, sale.rowIndex)}
+                                                                                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 bg-white rounded-full p-1 shadow-sm border border-gray-100"
+                                                                                                        title="덧글 삭제"
+                                                                                                    >
+                                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                                                                                                    </button>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        )
+                                                                                    })}
+                                                                                </div>
+                                                                            )}
+                                                                        </>
+                                                                    )
+                                                                })()}
                                                             </div>
-                                                        )}
-                                                        {sale.specialNotes && (
-                                                            <div className="mt-3 text-red-800 bg-red-50/50 p-3 rounded-md border border-red-50">
-                                                                <span className="font-semibold text-red-600 flex items-center gap-1.5">🚨 입금현황 및 특이사항 (기존 덧글 포함):</span>
-                                                                <div className="mt-2 pl-1 whitespace-pre-wrap leading-[1.6] font-medium text-red-900/90">{sale.specialNotes}</div>
-                                                            </div>
-                                                        )}
+                                                        </div>
                                                     </div>
                                                 )}
 
