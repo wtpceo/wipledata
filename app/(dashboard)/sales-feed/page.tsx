@@ -120,10 +120,20 @@ export default function SalesFeedPage() {
     const year = todayDate.getFullYear()
     const month = String(todayDate.getMonth() + 1).padStart(2, '0')
     const day = String(todayDate.getDate()).padStart(2, '0')
-    const yyyymmdd = `${year}-${month}-${day}` // 2026-02-23 포맷
-    const yyyy_mm_dd_dot = `${year}. ${todayDate.getMonth() + 1}. ${todayDate.getDate()}.` // 스프레드시트 타임스탬프 형식 (2026. 2. 23. ...)
+    const yyyy_mm_dd_dash = `${year}-${month}-${day}` // 2026-02-23
+    const yyyy_mm_dd_dot1 = `${year}. ${todayDate.getMonth() + 1}. ${todayDate.getDate()}.` // 2026. 2. 23.
+    const yyyy_mm_dd_dot2 = `${year}. ${month}. ${day}.` // 2026. 02. 23.
 
-    const todaysSales = allData.filter(sale => sale.contractDate === yyyymmdd || (sale.timestamp && sale.timestamp.startsWith(yyyy_mm_dd_dot)))
+    const isToday = (dateStr: string) => {
+        if (!dateStr) return false;
+        return dateStr.startsWith(yyyy_mm_dd_dash) ||
+            dateStr.startsWith(yyyy_mm_dd_dot1) ||
+            dateStr.startsWith(yyyy_mm_dd_dot2) ||
+            dateStr.replace(/\s/g, '').startsWith(`${year}.${month}.${day}`) ||
+            dateStr.replace(/\s/g, '').startsWith(`${year}.${todayDate.getMonth() + 1}.${todayDate.getDate()}`);
+    }
+
+    const todaysSales = allData.filter(sale => isToday(sale.contractDate) || isToday(sale.timestamp))
     const todaysTotalAmount = todaysSales.reduce((acc, sale) => acc + sale.totalAmount, 0)
 
     return (
@@ -287,7 +297,7 @@ export default function SalesFeedPage() {
                     <CardHeader className="bg-slate-900 text-white rounded-t-lg pb-4">
                         <CardTitle className="text-xl flex items-center gap-2">오늘의 영업 현황</CardTitle>
                         <CardDescription className="text-slate-300 font-medium tracking-wide">
-                            {yyyymmdd} 기준
+                            {yyyy_mm_dd_dash} 기준
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="p-0 bg-white">
