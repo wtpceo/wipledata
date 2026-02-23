@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
         // Ensure we start writing back to the exact same cell M{rowIndex}
         await updateSheet(cellRange, [[finalNotes]])
 
-        // 입금확인 키워드 감지: 댓글에 "입금확인"이 포함되면 결제방식을 업데이트
+        // 입금확인 키워드 감지: 댓글에 "입금확인"이 포함되며 작성자가 "김민우"일 경우에만 결제방식을 업데이트
         let paymentUpdated = false
-        if (replyText.includes('입금확인')) {
+        if (replyText.includes('입금확인') && authorName === '김민우') {
             // I열(인덱스 8): 결제 방식 읽기
             const paymentCellRange = `원본데이터!I${rowIndex}`
             const paymentData = await readFromSheet(paymentCellRange)

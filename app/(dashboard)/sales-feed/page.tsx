@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, MessageSquare, Send, Package } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 const INTERNAL_TEAM = ['이수빈', '최호천', '조아라', '정우진', '양주미', '김민우', '박한']
 const SALES_TEAM = ['박현수', '박은수']
@@ -26,11 +27,15 @@ export default function SalesFeedPage() {
     const [replyName, setReplyName] = useState('')
     const [isSubmittingReply, setIsSubmittingReply] = useState(false)
 
-    useEffect(() => {
-        // Load name from localStorage
-        const savedName = localStorage.getItem('sales_feed_reply_name')
-        if (savedName) setReplyName(savedName)
+    const { data: session } = useSession()
 
+    useEffect(() => {
+        if (session?.user?.name) {
+            setReplyName(session.user.name)
+        }
+    }, [session?.user?.name])
+
+    useEffect(() => {
         fetchSalesFeed()
         // 1분(60초)마다 데이터 자동 갱신
         const interval = setInterval(() => {
@@ -86,7 +91,6 @@ export default function SalesFeedPage() {
 
         try {
             setIsSubmittingReply(true)
-            localStorage.setItem('sales_feed_reply_name', replyName)
 
             const response = await fetch('/api/sales-feed/reply', {
                 method: 'POST',
@@ -310,9 +314,9 @@ export default function SalesFeedPage() {
                                                         <div className="flex gap-2">
                                                             <Input
                                                                 placeholder="직원 이름"
-                                                                className="w-28 bg-white border-gray-300"
+                                                                className="w-28 bg-white border-gray-300 pointer-events-none opacity-80"
                                                                 value={replyName}
-                                                                onChange={(e) => setReplyName(e.target.value)}
+                                                                readOnly
                                                                 maxLength={10}
                                                             />
                                                             <Input
