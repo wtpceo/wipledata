@@ -143,7 +143,7 @@ export default function SalesFeedPage() {
             <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-end mb-6">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">매출 자료</h2>
+                        <h2 className="text-3xl font-bold tracking-tight">매출 피드</h2>
                         <p className="text-muted-foreground mt-1">
                             2026년 1월부터의 모든 매출 및 연장 내역이 실시간으로 제공되며, 답장을 남길 수 있습니다.
                         </p>
