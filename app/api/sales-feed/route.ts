@@ -22,25 +22,7 @@ export async function GET(request: NextRequest) {
                 const consultationContent = row[11] || ''
                 const specialNotes = row[12] || ''
 
-                let contractDate = row[14] || ''
-                // YYYY. MM. DD 또는 YYYY.MM.DD 형식을 YYYY-MM-DD로 변환
-                if (contractDate.includes('.')) {
-                    const parts = contractDate.split('.').map((p: string) => p.trim()).filter(Boolean);
-                    if (parts.length >= 3) {
-                        contractDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-                    }
-                } else if (contractDate.includes('/')) {
-                    const parts = contractDate.split('/').map((p: string) => p.trim()).filter(Boolean);
-                    if (parts.length >= 3) {
-                        // MM/DD/YYYY 또는 YYYY/MM/DD 대응
-                        if (parts[0].length === 4) {
-                            contractDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-                        } else if (parts[2].length === 4) {
-                            contractDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-                        }
-                    }
-                }
-
+                const contractDate = row[14] || ''
                 const inputMonth = row[18] || ''
 
                 return {
@@ -63,8 +45,10 @@ export async function GET(request: NextRequest) {
                 }
             })
             .filter(item => {
+                // timestamp (O열 등)에서 'T' 앞부분 날짜(YYYY-MM-DD)를 추출하여 필터링
+                const datePart = item.timestamp.split('T')[0]
                 // 2026년 1월부터의 데이터만 가져오기
-                return item.contractDate >= '2026-01-01' || item.inputMonth >= '2026-01'
+                return datePart >= '2026-01-01'
             })
             // 최신 등록순으로 정렬
             .reverse()
