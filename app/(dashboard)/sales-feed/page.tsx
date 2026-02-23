@@ -213,7 +213,7 @@ export default function SalesFeedPage() {
                                                     ) : sale.paymentMethod === '입금확인' ? (
                                                         <span className="ml-2 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold border border-emerald-200">✅ 입금확인</span>
                                                     ) : sale.paymentMethod ? (
-                                                        <span className="ml-2 text-gray-500"> / {sale.paymentMethod}</span>
+                                                        <span className="ml-2 text-gray-500"> / {sale.paymentMethod}{sale.approvalNum && sale.approvalNum.trim() !== '' ? ` (승인번호: ${sale.approvalNum})` : ''}</span>
                                                     ) : null}
                                                 </div>
 
