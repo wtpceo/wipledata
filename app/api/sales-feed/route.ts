@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
 
                 return {
                     id: `feed-${index}`,
+                    rowIndex: index + 2, // 1-based index and skipping header
                     timestamp,
                     department,
                     inputPerson,
