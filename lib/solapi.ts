@@ -29,6 +29,7 @@ function formatAmount(amount: number): string {
 const KAKAO_PF_ID = process.env.SOLAPI_KAKAO_PF_ID || ''
 const KAKAO_NEW_SALE_TEMPLATE = process.env.SOLAPI_KAKAO_NEW_SALE_TEMPLATE || ''
 const KAKAO_NEW_REPLY_TEMPLATE = process.env.SOLAPI_KAKAO_NEW_REPLY_TEMPLATE || ''
+const DISABLE_ALERTS = process.env.SOLAPI_DISABLE_ALERTS === 'true'
 
 // 새 매출 등록 알림
 export async function notifyNewSale(data: {
@@ -90,6 +91,11 @@ export async function notifyNewReply(data: {
 
 // 전체 수신자에게 발송
 async function sendToAll(text: string, templateId?: string, variables?: Record<string, string>) {
+  if (DISABLE_ALERTS) {
+    console.log('알림 발송이 비활성화되어 있습니다 (SOLAPI_DISABLE_ALERTS=true)')
+    return
+  }
+
   try {
     const isKakaoReady = KAKAO_PF_ID && templateId
 
