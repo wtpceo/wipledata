@@ -534,7 +534,7 @@ export default function NewSalePage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Label htmlFor="specialNotes">특이사항</Label>
-                <span className="text-sm text-destructive font-bold">( 단지명 / 대수 / 대당단가 입력 )</span>
+                <span className="text-sm text-destructive font-bold">( 단지명 / 대수 / 대당단가 입력 ) *미디어 계약 필수 입력*</span>
               </div>
               <Textarea
                 id="specialNotes"
@@ -544,9 +544,6 @@ export default function NewSalePage() {
                 placeholder="특이사항이 있다면 입력하세요"
                 className="min-h-[100px]"
               />
-              <p className="text-sm text-muted-foreground">
-                단지명 / 대수 / 대당단가 입력하세요
-              </p>
             </div>
 
             <div className="space-y-2">
