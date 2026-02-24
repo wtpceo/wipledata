@@ -25,6 +25,11 @@ function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount) + '원'
 }
 
+// 환경변수에서 카카오 정보 불러오기
+const KAKAO_PF_ID = process.env.SOLAPI_KAKAO_PF_ID || ''
+const KAKAO_NEW_SALE_TEMPLATE = process.env.SOLAPI_KAKAO_NEW_SALE_TEMPLATE || ''
+const KAKAO_NEW_REPLY_TEMPLATE = process.env.SOLAPI_KAKAO_NEW_REPLY_TEMPLATE || ''
+
 // 새 매출 등록 알림
 export async function notifyNewSale(data: {
   inputPerson: string
@@ -35,7 +40,7 @@ export async function notifyNewSale(data: {
   salesType: string
 }) {
   const text = [
-    '[위플] 새 매출 등록',
+    '[위즈더플래닝] 새 매출 등록',
     '',
     `부서: ${data.department}`,
     `입력자: ${data.inputPerson}`,
@@ -45,7 +50,16 @@ export async function notifyNewSale(data: {
     `금액: ${formatAmount(data.totalAmount)}`,
   ].join('\n')
 
-  await sendToAll(text)
+  const kakaoVariables = {
+    '#{department}': data.department || '-',
+    '#{inputPerson}': data.inputPerson || '-',
+    '#{salesType}': data.salesType || '-',
+    '#{clientName}': data.clientName || '-',
+    '#{productName}': data.productName || '-',
+    '#{totalAmount}': formatAmount(data.totalAmount),
+  }
+
+  await sendToAll(text, KAKAO_NEW_SALE_TEMPLATE, kakaoVariables)
 }
 
 // 댓글 알림
@@ -55,24 +69,51 @@ export async function notifyNewReply(data: {
   replyText: string
 }) {
   const text = [
-    '[위플] 새 댓글',
+    '[위즈더플래닝] 새 덧글',
     '',
     `작성자: ${data.authorName}`,
     `광고주: ${data.clientName}`,
     `내용: ${data.replyText.length > 50 ? data.replyText.substring(0, 50) + '...' : data.replyText}`,
   ].join('\n')
 
-  await sendToAll(text)
+  const kakaoVariables = {
+    '#{authorName}': data.authorName || '-',
+    '#{clientName}': data.clientName || '-',
+    '#{replyText}': data.replyText || '-',
+  }
+
+  await sendToAll(text, KAKAO_NEW_REPLY_TEMPLATE, kakaoVariables)
 }
 
 // 전체 수신자에게 발송
-async function sendToAll(text: string) {
+async function sendToAll(text: string, templateId?: string, variables?: Record<string, string>) {
   try {
-    const messages = NOTIFICATION_RECIPIENTS.map(to => ({
-      to,
-      from: SENDER_NUMBER,
-      text,
-    }))
+    const isKakaoReady = KAKAO_PF_ID && templateId
+
+    const messages = NOTIFICATION_RECIPIENTS.map(to => {
+      // 카카오톡 알림톡 발송 (준비된 경우)
+      if (isKakaoReady) {
+        return {
+          to,
+          from: SENDER_NUMBER,
+          text,
+          type: 'ATA' as const, // 알림톡
+          kakaoOptions: {
+            pfId: KAKAO_PF_ID,
+            templateId: templateId,
+            variables: variables || {},
+            disableSms: true, // 실패 시 문자로 대체 발송 (개발/테스트 단계에선 켜두는게 좋음)
+          },
+        }
+      }
+
+      // 기본 LMS/SMS 발송 (카카오톡 설정이 안된 경우)
+      return {
+        to,
+        from: SENDER_NUMBER,
+        text,
+      }
+    })
 
     const result = await messageService.send(messages)
     console.log('✅ 알림 발송 완료:', result)
