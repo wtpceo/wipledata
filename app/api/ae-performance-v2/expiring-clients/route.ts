@@ -81,22 +81,17 @@ export async function GET(request: NextRequest) {
 
     rawData.forEach(row => {
       const department = row[1] || ''
+      if (department === '영업부') return // 영업부 제외 - 내무부만 통계에 포함
       const aeName = normalizeStaffName(row[2] || '')
       const salesType = row[3] || ''
       const clientName = (row[4] || '').trim()
       const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0
-      const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0
-      const totalAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+      const totalAmount = contractAmount // 내무부는 외주비 차감 없음
 
-      // 날짜 확인
+      // 날짜 확인 (내무부: A열 타임스탬프 기준)
       let isTargetMonth = false
-      if (department === '영업부') {
-        const inputMonth = row[18] || ''
-        if (inputMonth.includes(targetYM) || inputMonth.replace('.', '-') === targetYM) isTargetMonth = true
-      } else {
-        const date = parseDate(row[0] || '')
-        if (date && date.getMonth() === targetMonth && date.getFullYear() === targetYear) isTargetMonth = true
-      }
+      const date = parseDate(row[0] || '')
+      if (date && date.getMonth() === targetMonth && date.getFullYear() === targetYear) isTargetMonth = true
 
       if (isTargetMonth) {
         // 매출 집계
