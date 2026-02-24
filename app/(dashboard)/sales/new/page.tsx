@@ -532,7 +532,10 @@ export default function NewSalePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="specialNotes">특이사항</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="specialNotes">특이사항</Label>
+                <span className="text-xs text-destructive font-medium">( 단지명 / 진행기간 / 대당단가 기입 , 기존 밴드양식 )</span>
+              </div>
               <Textarea
                 id="specialNotes"
                 name="specialNotes"
