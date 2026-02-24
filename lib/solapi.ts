@@ -38,6 +38,7 @@ export async function notifyNewSale(data: {
   productName: string
   totalAmount: number
   salesType: string
+  specialNotes?: string
 }) {
   const text = [
     '[위즈더플래닝] 새 매출 등록',
@@ -48,6 +49,7 @@ export async function notifyNewSale(data: {
     `광고주: ${data.clientName}`,
     `상품: ${data.productName}`,
     `금액: ${formatAmount(data.totalAmount)}`,
+    ...(data.specialNotes ? [`특이사항: ${data.specialNotes}`] : []),
   ].join('\n')
 
   const kakaoVariables = {
@@ -57,6 +59,7 @@ export async function notifyNewSale(data: {
     '#{clientName}': data.clientName || '-',
     '#{productName}': data.productName || '-',
     '#{totalAmount}': formatAmount(data.totalAmount),
+    '#{specialNotes}': data.specialNotes || '없음',
   }
 
   await sendToAll(text, KAKAO_NEW_SALE_TEMPLATE, kakaoVariables)

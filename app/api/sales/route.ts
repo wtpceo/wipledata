@@ -230,6 +230,7 @@ export async function POST(request: NextRequest) {
       productName: finalProductName,
       totalAmount,
       salesType,
+      specialNotes,
     })
 
     return NextResponse.json({
