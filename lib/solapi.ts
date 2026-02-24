@@ -1,8 +1,8 @@
 import { SolapiMessageService } from 'solapi'
 
 const messageService = new SolapiMessageService(
-  process.env.SOLAPI_API_KEY || '',
-  process.env.SOLAPI_API_SECRET || ''
+  process.env.SOLAPI_API_KEY || 'NCS56Q8FKROVG59D',
+  process.env.SOLAPI_API_SECRET || '55SYXGKUW4NAVQ6UEETIAQKEEBK6RCSE'
 )
 
 const SENDER_NUMBER = process.env.SOLAPI_SENDER_NUMBER || '01023399855'
