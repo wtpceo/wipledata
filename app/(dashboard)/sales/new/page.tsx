@@ -48,6 +48,7 @@ export default function NewSalePage() {
     totalAmount: '',
     paymentMethod: '',
     paymentMethodOther: '',
+    depositorName: '', // 입금자명 (입금예정 선택 시)
     approvalNumber: '',
     outsourcingCost: '',
 
@@ -573,6 +574,20 @@ export default function NewSalePage() {
                     placeholder="기타 결제 방식 입력"
                     className="mt-2"
                   />
+                )}
+                {formData.paymentMethod === '입금예정' && (
+                  <div className="mt-2">
+                    <Label htmlFor="depositorName">입금자명</Label>
+                    <Input
+                      id="depositorName"
+                      name="depositorName"
+                      type="text"
+                      value={formData.depositorName}
+                      onChange={handleInputChange}
+                      placeholder="입금자명을 입력하세요"
+                      className="mt-1"
+                    />
+                  </div>
                 )}
               </div>
             </div>

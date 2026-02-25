@@ -55,7 +55,8 @@ async function handleRenewalSuccess(
   paymentMethod: string,
   paymentMethodOther: string,
   approvalNumber: string,
-  outsourcingCost: number
+  outsourcingCost: number,
+  depositorName: string
 ) {
   const auth = getGoogleAuth()
   const sheets = google.sheets({ version: 'v4', auth })
@@ -142,10 +143,19 @@ async function handleRenewalSuccess(
     netProfit.toString(), // R: 순수익
     inputYearMonth, // S: 입력 년월
     quarter, // T: 분기
+    '', // U: 마케팅 담당자
+    '', // V: 온라인 점검 여부
+    '', // W: 점검 일시
+    '', // X: 광고주 주소
+    '', // Y: 광고주 연락처
+    '', // Z: 단지명
+    '', // AA: 설치대수
+    '', // AB: 대당단가
+    finalPaymentMethod === '입금예정' ? (depositorName || '') : '', // AC: 입금자명
   ]
 
   // 원본데이터 탭에 저장
-  await writeToSheet('원본데이터!A:T', [rawDataRow])
+  await writeToSheet('원본데이터!A:AC', [rawDataRow])
 
   return { success: true, newEndDate: formatDate(newEndDate) }
 }
@@ -203,7 +213,8 @@ export async function POST(request: NextRequest) {
       paymentMethod,
       paymentMethodOther,
       approvalNumber,
-      outsourcingCost
+      outsourcingCost,
+      depositorName
     } = body
 
     console.log('=== Client Update Request ===')
@@ -267,7 +278,8 @@ export async function POST(request: NextRequest) {
         paymentMethod,
         paymentMethodOther || '',
         approvalNumber || '',
-        outsourcingCost || 0
+        outsourcingCost || 0,
+        depositorName || ''
       )
 
       console.log('✅ Client renewed successfully')

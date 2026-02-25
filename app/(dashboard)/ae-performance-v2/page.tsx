@@ -119,6 +119,7 @@ export default function AEPerformanceV2Page() {
   const [productOther, setProductOther] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('결제 방식을 선택하세요')
   const [paymentMethodOther, setPaymentMethodOther] = useState('')
+  const [depositorName, setDepositorName] = useState('')
   const [approvalNumber, setApprovalNumber] = useState('')
   const [outsourcingCost, setOutsourcingCost] = useState(0)
 
@@ -205,6 +206,7 @@ export default function AEPerformanceV2Page() {
     setProductOther('')
     setPaymentMethod('결제 방식을 선택하세요')
     setPaymentMethodOther('')
+    setDepositorName('')
     setApprovalNumber('')
     setOutsourcingCost(0)
 
@@ -264,7 +266,8 @@ export default function AEPerformanceV2Page() {
           paymentMethod: dialogAction === 'renewed' ? paymentMethod : undefined,
           paymentMethodOther: dialogAction === 'renewed' ? paymentMethodOther : undefined,
           approvalNumber: dialogAction === 'renewed' ? approvalNumber : undefined,
-          outsourcingCost: dialogAction === 'renewed' ? outsourcingCost : undefined
+          outsourcingCost: dialogAction === 'renewed' ? outsourcingCost : undefined,
+          depositorName: dialogAction === 'renewed' ? depositorName : undefined
         })
       })
 
@@ -999,6 +1002,17 @@ export default function AEPerformanceV2Page() {
                       onChange={(e) => setPaymentMethodOther(e.target.value)}
                       placeholder="직접 입력"
                     />
+                  )}
+                  {paymentMethod === '입금예정' && (
+                    <div className="mt-2">
+                      <Label>입금자명</Label>
+                      <Input
+                        className="mt-1"
+                        value={depositorName}
+                        onChange={(e) => setDepositorName(e.target.value)}
+                        placeholder="입금자명을 입력하세요"
+                      />
+                    </div>
                   )}
                 </div>
 

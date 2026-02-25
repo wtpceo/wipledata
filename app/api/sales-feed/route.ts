@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
     try {
-        const data = await readFromSheet('원본데이터!A2:AB')
+        const data = await readFromSheet('원본데이터!A2:AC')
 
         const feedData = data
             .map((row, index) => {
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
                 const mediaComplexName = row[25] || ''
                 const mediaInstallCount = row[26] || ''
                 const mediaUnitPrice = row[27] || ''
+                const depositorName = row[28] || '' // AC열: 입금자명
 
                 return {
                     id: `feed-${index}`,
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
                     mediaComplexName,
                     mediaInstallCount,
                     mediaUnitPrice,
+                    depositorName,
                 }
             })
             .filter(item => {

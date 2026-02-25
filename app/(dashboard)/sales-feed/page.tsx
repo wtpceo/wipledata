@@ -55,7 +55,9 @@ export default function SalesFeedPage() {
             (sale.inputPerson || '').toLowerCase().includes(lowerQ) ||
             (sale.productName || '').toLowerCase().includes(lowerQ) ||
             (sale.consultationContent || '').toLowerCase().includes(lowerQ) ||
-            (sale.specialNotes || '').toLowerCase().includes(lowerQ)
+            (sale.specialNotes || '').toLowerCase().includes(lowerQ) ||
+            (sale.paymentMethod || '').toLowerCase().includes(lowerQ) ||
+            (sale.depositorName || '').toLowerCase().includes(lowerQ)
         )
         setData(filtered)
     }, [searchQuery, allData])
@@ -138,7 +140,10 @@ export default function SalesFeedPage() {
     }
 
     const todaysSales = allData.filter(sale => isToday(sale.contractDate) || isToday(sale.timestamp))
-    const todaysTotalAmount = todaysSales.reduce((acc, sale) => acc + sale.totalAmount, 0)
+    const todaysTotalAmount = todaysSales.reduce((acc, sale) => {
+        if (sale.paymentMethod === '입금예정') return acc
+        return acc + sale.totalAmount
+    }, 0)
 
     return (
         <div className="space-y-6 max-w-[1400px] mx-auto pb-10 flex flex-col xl:flex-row gap-6">
@@ -204,7 +209,10 @@ export default function SalesFeedPage() {
                                     const displayDate = isValidDate
                                         ? `${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일 (${['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()]})`
                                         : dateKey
-                                    const dateTotalAmount = salesInDate.reduce((a: number, s: any) => a + s.totalAmount, 0)
+                                    const dateTotalAmount = salesInDate.reduce((a: number, s: any) => {
+                                        if (s.paymentMethod === '입금예정') return a
+                                        return a + s.totalAmount
+                                    }, 0)
 
                                     return (
                                         <div key={dateKey} className="mb-1">
@@ -245,9 +253,9 @@ export default function SalesFeedPage() {
                                                                         {sale.contractPeriod ? <span className="mr-4"><b>계약기간:</b> {sale.contractPeriod}</span> : ''}
                                                                         <span className={sale.totalAmount > 0 ? 'text-blue-700 font-medium' : ''}><b>금액:</b> {formatCurrency(sale.totalAmount)}</span>
                                                                         {sale.paymentMethod === '입금예정' ? (
-                                                                            <span className="ml-2 text-orange-600 bg-orange-50 px-2 py-0.5 rounded text-xs font-semibold border border-orange-200">⏳ 입금예정</span>
-                                                                        ) : sale.paymentMethod === '입금확인' ? (
-                                                                            <span className="ml-2 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold border border-emerald-200">✅ 입금확인</span>
+                                                                            <span className="ml-2 text-orange-600 bg-orange-50 px-2 py-0.5 rounded text-xs font-semibold border border-orange-200">⏳ 입금예정{sale.depositorName ? ` (${sale.depositorName})` : ''}</span>
+                                                                        ) : (sale.paymentMethod === '입금완료' || sale.paymentMethod === '입금확인') ? (
+                                                                            <span className="ml-2 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold border border-emerald-200">✅ 입금완료</span>
                                                                         ) : sale.paymentMethod ? (
                                                                             <span className="ml-2 text-gray-500"> / {sale.paymentMethod}{sale.approvalNum && sale.approvalNum.trim() !== '' ? ` (승인번호: ${sale.approvalNum})` : ''}</span>
                                                                         ) : null}
@@ -438,7 +446,10 @@ export default function SalesFeedPage() {
 
                                         return Object.entries(groupedByPerson).map(([person, sales]) => {
                                             const personStyle = getDeptStyles(person, sales[0]?.department)
-                                            const personTotal = sales.reduce((acc: number, s: any) => acc + s.totalAmount, 0)
+                                            const personTotal = sales.reduce((acc: number, s: any) => {
+                                                if (s.paymentMethod === '입금예정') return acc
+                                                return acc + s.totalAmount
+                                            }, 0)
                                             return (
                                                 <div key={`group-${person}`} className="rounded-xl bg-gray-50 border border-gray-100 overflow-hidden">
                                                     {/* 담당자 헤더 */}

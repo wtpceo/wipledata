@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
       mediaComplexName,
       mediaInstallCount,
       mediaUnitPrice,
+
+      // 입금자명 (입금예정 선택 시)
+      depositorName,
     } = body
 
     // 현재 날짜와 시간
@@ -209,6 +212,7 @@ export async function POST(request: NextRequest) {
       mediaComplexName || '', // Z: 단지명
       mediaInstallCount ? mediaInstallCount.toString() : '', // AA: 설치대수
       mediaUnitPrice ? mediaUnitPrice.toString() : '', // AB: 대당단가
+      depositorName || '', // AC: 입금자명
     ]
 
     // Sales 시트와 원본데이터 탭에 동시에 쓰기

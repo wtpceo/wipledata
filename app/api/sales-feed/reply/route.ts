@@ -29,19 +29,20 @@ export async function POST(request: NextRequest) {
         // Ensure we start writing back to the exact same cell M{rowIndex}
         await updateSheet(cellRange, [[finalNotes]])
 
-        // 입금확인 키워드 감지: 댓글에 "입금확인"이 포함되며 작성자가 "김민우"일 경우에만 결제방식을 업데이트
+        // 입금완료 키워드 감지: 댓글에 "입금완료" 또는 "입금 완료"가 포함되며 작성자가 "김민우"일 경우에만 결제방식을 업데이트
         let paymentUpdated = false
-        if (replyText.includes('입금확인') && authorName === '김민우') {
+        const isPaymentCompleteKeyword = replyText.includes('입금완료') || replyText.includes('입금 완료')
+        if (isPaymentCompleteKeyword && authorName === '김민우') {
             // I열(인덱스 8): 결제 방식 읽기
             const paymentCellRange = `원본데이터!I${rowIndex}`
             const paymentData = await readFromSheet(paymentCellRange)
             const currentPaymentMethod = paymentData && paymentData[0] && paymentData[0][0] ? paymentData[0][0] : ''
 
-            // 입금예정인 경우에만 입금확인으로 변경
+            // 입금예정인 경우에만 입금완료로 변경
             if (currentPaymentMethod === '입금예정') {
-                await updateSheet(paymentCellRange, [['입금확인']])
+                await updateSheet(paymentCellRange, [['입금완료']])
                 paymentUpdated = true
-                console.log(`✅ 입금확인 처리: row ${rowIndex}, 결제방식 '입금예정' → '입금확인'`)
+                console.log(`✅ 입금완료 처리: row ${rowIndex}, 결제방식 '입금예정' → '입금완료'`)
             }
         }
 
