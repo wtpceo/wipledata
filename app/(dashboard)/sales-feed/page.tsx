@@ -402,7 +402,7 @@ export default function SalesFeedPage() {
 
             {/* Right Side Summary Panel */}
             <div className="xl:w-[350px] flex-shrink-0 mt-8 xl:mt-[72px]">
-                <Card className="sticky top-6 shadow-sm border-gray-200 overflow-hidden">
+                <Card className="shadow-sm border-gray-200 overflow-hidden">
                     <CardHeader className="bg-slate-900 text-white rounded-t-lg pb-4">
                         <CardTitle className="text-xl flex items-center gap-2">오늘의 영업 현황</CardTitle>
                         <CardDescription className="text-slate-300 font-medium tracking-wide">
@@ -425,7 +425,7 @@ export default function SalesFeedPage() {
                                 <span>상세 계약 내역</span>
                                 <span>{todaysSales.length}건</span>
                             </div>
-                            <div className="flex flex-col gap-3 max-h-[calc(100vh-320px)] min-h-[300px] overflow-y-auto pr-2 pb-2 custom-scrollbar">
+                            <div className="flex flex-col gap-3 pb-2">
                                 {todaysSales.length > 0 ? (
                                     (() => {
                                         // 담당자별 그룹핑
