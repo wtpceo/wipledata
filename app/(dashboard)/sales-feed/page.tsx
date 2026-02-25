@@ -207,41 +207,41 @@ export default function SalesFeedPage() {
                                     const dateTotalAmount = salesInDate.reduce((a: number, s: any) => a + s.totalAmount, 0)
 
                                     return (
-                                        <div key={dateKey} className="mb-2">
+                                        <div key={dateKey} className="mb-1">
                                             {/* 날짜 헤더 */}
-                                            <div className="sticky top-0 z-10 flex items-center gap-3 py-2.5 px-1 mb-2">
+                                            <div className="sticky top-0 z-10 flex items-center gap-2 py-1.5 px-1 mb-1">
                                                 <div className="h-px flex-1 bg-gray-300" />
-                                                <span className="text-[13px] font-bold text-gray-600 bg-[#ebedf0] px-3 py-1 rounded-full whitespace-nowrap shadow-sm border border-gray-200">
+                                                <span className="text-[11px] font-bold text-gray-600 bg-[#ebedf0] px-2.5 py-0.5 rounded-full whitespace-nowrap shadow-sm border border-gray-200">
                                                     📅 {displayDate} · {salesInDate.length}건 · {formatCurrency(dateTotalAmount)}
                                                 </span>
                                                 <div className="h-px flex-1 bg-gray-300" />
                                             </div>
 
-                                            <div className="flex flex-col gap-5">
+                                            <div className="flex flex-col gap-3">
                                                 {salesInDate.map((sale) => {
                                                     const deptStyle = getDeptStyles(sale.inputPerson, sale.department)
                                                     return (
-                                                        <div key={sale.id} className="flex gap-3 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                                            <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-lg font-bold shadow-sm border ${deptStyle.bg} ${deptStyle.border} ${deptStyle.text}`}>
+                                                        <div key={sale.id} className="flex gap-2.5 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                                            <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold shadow-sm border ${deptStyle.bg} ${deptStyle.border} ${deptStyle.text}`}>
                                                                 {sale.inputPerson?.charAt(0) || '👤'}
                                                             </div>
                                                             <div className="flex flex-col max-w-[90%] w-full">
-                                                                <span className={`text-[15px] mb-1 ml-1 font-bold ${deptStyle.text}`}>
-                                                                    {sale.inputPerson} <span className="text-xs font-normal opacity-70">({sale.department})</span>
+                                                                <span className={`text-[13px] mb-0.5 ml-0.5 font-bold ${deptStyle.text}`}>
+                                                                    {sale.inputPerson} <span className="text-[11px] font-normal opacity-70">({sale.department})</span>
                                                                 </span>
-                                                                <div className="bg-white px-4 py-4 rounded-2xl rounded-tl-sm shadow-sm text-base whitespace-pre-line text-gray-800 leading-relaxed font-normal">
-                                                                    <div className="font-semibold text-[17px] flex items-center gap-2 mb-2 flex-wrap">
+                                                                <div className="bg-white px-3 py-2.5 rounded-xl rounded-tl-sm shadow-sm text-sm whitespace-pre-line text-gray-800 leading-normal font-normal">
+                                                                    <div className="font-semibold text-[14px] flex items-center gap-1.5 mb-1.5 flex-wrap">
                                                                         {sale.contractType === '연장' ? (
-                                                                            <span className="text-blue-600 bg-blue-50 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-blue-100">[연장]</span>
+                                                                            <span className="text-blue-600 bg-blue-50 px-1.5 flex items-center h-5 rounded text-xs whitespace-nowrap border border-blue-100">[연장]</span>
                                                                         ) : sale.contractType === '신규' ? (
-                                                                            <span className="text-pink-600 bg-pink-50 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-pink-100">[신규]</span>
+                                                                            <span className="text-pink-600 bg-pink-50 px-1.5 flex items-center h-5 rounded text-xs whitespace-nowrap border border-pink-100">[신규]</span>
                                                                         ) : sale.contractType ? (
-                                                                            <span className="text-gray-600 bg-gray-100 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-gray-200">[{sale.contractType}]</span>
+                                                                            <span className="text-gray-600 bg-gray-100 px-1.5 flex items-center h-5 rounded text-xs whitespace-nowrap border border-gray-200">[{sale.contractType}]</span>
                                                                         ) : null}
                                                                         <span className="tracking-tight">{sale.productName ? `${sale.productName}) ` : ''}{sale.clientName}</span>
                                                                     </div>
 
-                                                                    <div className="text-[15px] bg-[#f8fafc] px-4 py-3 rounded-md border border-slate-100 inline-block w-full">
+                                                                    <div className="text-[13px] bg-[#f8fafc] px-3 py-2 rounded-md border border-slate-100 inline-block w-full">
                                                                         {sale.contractPeriod ? <span className="mr-4"><b>계약기간:</b> {sale.contractPeriod}</span> : ''}
                                                                         <span className={sale.totalAmount > 0 ? 'text-blue-700 font-medium' : ''}><b>금액:</b> {formatCurrency(sale.totalAmount)}</span>
                                                                         {sale.paymentMethod === '입금예정' ? (
@@ -255,7 +255,7 @@ export default function SalesFeedPage() {
 
                                                                     {/* 미디어 계약 정보 */}
                                                                     {sale.mediaComplexName && (
-                                                                        <div className="mt-3 text-[14px] bg-orange-50 px-4 py-2.5 rounded-md border border-orange-100 flex items-center gap-4 flex-wrap">
+                                                                        <div className="mt-2 text-[12px] bg-orange-50 px-3 py-1.5 rounded-md border border-orange-100 flex items-center gap-3 flex-wrap">
                                                                             <span className="font-semibold text-orange-700">🏢 미디어</span>
                                                                             <span><b>단지명:</b> {sale.mediaComplexName}</span>
                                                                             {sale.mediaInstallCount && <span><b>설치대수:</b> {sale.mediaInstallCount}대</span>}
@@ -290,8 +290,8 @@ export default function SalesFeedPage() {
                                                                         if (replyMatches.length === 0) return null;
 
                                                                         return (
-                                                                            <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
-                                                                                <div className="space-y-3">
+                                                                            <div className="mt-2 pt-2 border-t border-dashed border-gray-200">
+                                                                                <div className="space-y-2">
                                                                                     {replyMatches.map((match, i) => {
                                                                                         const fullMatchString = match[0];
                                                                                         const author = match[1];
@@ -299,12 +299,12 @@ export default function SalesFeedPage() {
                                                                                         const content = match[3];
                                                                                         return (
                                                                                             <div key={i} className="flex gap-2">
-                                                                                                <div className="bg-indigo-50/80 border border-indigo-100 rounded-lg p-3 flex-1 shadow-sm relative group">
+                                                                                                <div className="bg-indigo-50/80 border border-indigo-100 rounded-lg p-2 flex-1 shadow-sm relative group">
                                                                                                     <div className="flex justify-between items-start mb-1">
-                                                                                                        <span className="font-bold text-gray-700 text-[13px]">{author}</span>
+                                                                                                        <span className="font-bold text-gray-700 text-[12px]">{author}</span>
                                                                                                         <span className="text-gray-400 text-[11px]">{date}</span>
                                                                                                     </div>
-                                                                                                    <div className="text-gray-800 text-[14px] whitespace-pre-wrap">{content.trim()}</div>
+                                                                                                    <div className="text-gray-800 text-[12px] whitespace-pre-wrap">{content.trim()}</div>
 
                                                                                                     <button
                                                                                                         onClick={() => deleteReply(fullMatchString, sale.rowIndex)}
@@ -323,20 +323,20 @@ export default function SalesFeedPage() {
                                                                     })()}
 
                                                                     {/* 덧글 섹션 (Reply Section) */}
-                                                                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                                                    <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="sm"
-                                                                            className="text-gray-500 hover:text-gray-800 hover:bg-gray-100 p-2 h-auto rounded-md transition-colors"
+                                                                            className="text-gray-500 hover:text-gray-800 hover:bg-gray-100 p-1 h-auto rounded-md transition-colors text-xs"
                                                                             onClick={() => setActiveReplyId(activeReplyId === sale.id ? null : sale.id)}
                                                                         >
-                                                                            <MessageSquare className="w-4 h-4 mr-2" />
-                                                                            {activeReplyId === sale.id ? '답장 접기' : '답장 달기 (시트 동기화)'}
+                                                                            <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                                                                            {activeReplyId === sale.id ? '접기' : '답장'}
                                                                         </Button>
                                                                     </div>
 
                                                                     {activeReplyId === sale.id && (
-                                                                        <div className="mt-3 bg-gray-50/80 p-3.5 rounded-lg border border-gray-200 shadow-sm flex flex-col gap-2">
+                                                                        <div className="mt-2 bg-gray-50/80 p-2.5 rounded-lg border border-gray-200 shadow-sm flex flex-col gap-1.5">
                                                                             <div className="flex gap-2">
                                                                                 <Input
                                                                                     placeholder="직원 이름"
@@ -361,9 +361,8 @@ export default function SalesFeedPage() {
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                <span className="text-[11px] text-gray-400 mt-2 ml-1 flex items-center gap-2 tracking-wide font-medium">
-                                                                    작성: {sale.timestamp ? new Date(sale.timestamp.replace(/\./g, '-')).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
-                                                                    {sale.contractDate ? ` ǀ 계약일: ${sale.contractDate}` : ''}
+                                                                <span className="text-[10px] text-gray-400 mt-1 ml-0.5 flex items-center gap-1.5 tracking-wide font-medium">
+                                                                    {sale.timestamp ? new Date(sale.timestamp.replace(/\./g, '-')).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
                                                                 </span>
                                                             </div>
                                                         </div>
