@@ -61,12 +61,22 @@ export default function NewSalePage() {
     onlineCheckMonth: '',
     onlineCheckDay: '',
     onlineCheckHour: '',
-
-    // 미디어 계약 정보
-    mediaComplexName: '', // 단지명
-    mediaInstallCount: '', // 설치대수(수량)
-    mediaUnitPrice: '', // 대당단가
   })
+
+  // 미디어 계약 정보 (다중 입력)
+  const [mediaContracts, setMediaContracts] = useState([{ complexName: '', installCount: '', unitPrice: '' }])
+
+  const addMediaContract = () => {
+    setMediaContracts(prev => [...prev, { complexName: '', installCount: '', unitPrice: '' }])
+  }
+
+  const removeMediaContract = (index: number) => {
+    setMediaContracts(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updateMediaContract = (index: number, field: string, value: string) => {
+    setMediaContracts(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item))
+  }
 
   // 옥외매체가 선택되었는지 확인
   const hasOutdoorMedia = formData.productNames.some(p => OUTDOOR_MEDIA.includes(p))
@@ -148,9 +158,10 @@ export default function NewSalePage() {
           contractMonths: hasRegularMedia ? parseInt(formData.contractMonths) : 0,
           contractWeeks: hasOutdoorMedia ? parseInt(formData.contractWeeks) : 0,
           onlineCheckDateTime,
-          mediaComplexName: formData.mediaComplexName || '',
-          mediaInstallCount: formData.mediaInstallCount || '',
-          mediaUnitPrice: formData.mediaUnitPrice ? parseInt(formData.mediaUnitPrice.replace(/,/g, '')) : 0,
+          // 미디어 계약 정보: 여러 단지를 | 구분자로 직렬화
+          mediaComplexName: mediaContracts.map(m => m.complexName).filter(Boolean).join(' | '),
+          mediaInstallCount: mediaContracts.map(m => m.installCount).filter(Boolean).join(' | '),
+          mediaUnitPrice: mediaContracts.map(m => m.unitPrice ? parseInt(m.unitPrice.replace(/,/g, '')) : 0).filter(v => v > 0).join(' | '),
         }),
       })
 
@@ -439,56 +450,75 @@ export default function NewSalePage() {
         {/* 미디어 계약 정보 (옥외매체 선택 시 표시) */}
         {hasOutdoorMedia && (
           <Card className="border-orange-200 bg-orange-50/30">
-            <CardHeader>
-              <CardTitle className="text-lg text-orange-700 flex items-center gap-2">
-                🏢 미디어 계약 정보 (옥외매체)
-              </CardTitle>
-              <CardDescription>
-                포커스미디어/타운보드 계약 시 아래 항목을 입력해주세요.
-              </CardDescription>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg text-orange-700 flex items-center gap-2">
+                    🏢 미디어 계약 정보 (옥외매체)
+                  </CardTitle>
+                  <CardDescription>
+                    포커스미디어/타운보드 계약 시 단지 정보를 입력해주세요.
+                  </CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-orange-300 text-orange-700 hover:bg-orange-100"
+                  onClick={addMediaContract}
+                >
+                  + 단지 추가
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="mediaComplexName">단지명</Label>
-                <Input
-                  id="mediaComplexName"
-                  name="mediaComplexName"
-                  type="text"
-                  value={formData.mediaComplexName}
-                  onChange={handleInputChange}
-                  placeholder="예: OO아파트"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="mediaInstallCount">설치대수 (수량)</Label>
-                <Input
-                  id="mediaInstallCount"
-                  name="mediaInstallCount"
-                  type="number"
-                  min="1"
-                  value={formData.mediaInstallCount}
-                  onChange={handleInputChange}
-                  placeholder="예: 10"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="mediaUnitPrice">대당단가</Label>
-                <Input
-                  id="mediaUnitPrice"
-                  name="mediaUnitPrice"
-                  type="text"
-                  value={formData.mediaUnitPrice}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      mediaUnitPrice: formatCurrency(e.target.value),
-                    })
-                  }}
-                  placeholder="0"
-                />
-              </div>
+            <CardContent className="space-y-3">
+              {mediaContracts.map((contract, index) => (
+                <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
+                  <div className="space-y-1">
+                    {index === 0 && <Label className="text-xs">단지명</Label>}
+                    <Input
+                      type="text"
+                      value={contract.complexName}
+                      onChange={(e) => updateMediaContract(index, 'complexName', e.target.value)}
+                      placeholder="예: OO아파트"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    {index === 0 && <Label className="text-xs">설치대수</Label>}
+                    <Input
+                      type="number"
+                      min="1"
+                      value={contract.installCount}
+                      onChange={(e) => updateMediaContract(index, 'installCount', e.target.value)}
+                      placeholder="예: 10"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    {index === 0 && <Label className="text-xs">대당단가</Label>}
+                    <Input
+                      type="text"
+                      value={contract.unitPrice}
+                      onChange={(e) => updateMediaContract(index, 'unitPrice', formatCurrency(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className={index === 0 ? 'mt-5' : ''}>
+                    {index > 0 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-red-400 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => removeMediaContract(index)}
+                      >
+                        ✕
+                      </Button>
+                    ) : (
+                      <div className="h-9 w-9" />
+                    )}
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}

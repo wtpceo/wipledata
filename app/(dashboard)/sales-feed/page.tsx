@@ -254,14 +254,24 @@ export default function SalesFeedPage() {
                                                                     </div>
 
                                                                     {/* 미디어 계약 정보 */}
-                                                                    {sale.mediaComplexName && (
-                                                                        <div className="mt-2 text-[12px] bg-orange-50 px-3 py-1.5 rounded-md border border-orange-100 flex items-center gap-3 flex-wrap">
-                                                                            <span className="font-semibold text-orange-700">🏢 미디어</span>
-                                                                            <span><b>단지명:</b> {sale.mediaComplexName}</span>
-                                                                            {sale.mediaInstallCount && <span><b>설치대수:</b> {sale.mediaInstallCount}대</span>}
-                                                                            {sale.mediaUnitPrice && <span><b>대당단가:</b> {formatCurrency(parseInt(sale.mediaUnitPrice))}</span>}
-                                                                        </div>
-                                                                    )}
+                                                                    {sale.mediaComplexName && (() => {
+                                                                        const names = (sale.mediaComplexName as string).split(' | ')
+                                                                        const counts = sale.mediaInstallCount ? (sale.mediaInstallCount as string).split(' | ') : []
+                                                                        const prices = sale.mediaUnitPrice ? (sale.mediaUnitPrice as string).split(' | ') : []
+                                                                        return (
+                                                                            <div className="mt-2 text-[12px] bg-orange-50 px-3 py-1.5 rounded-md border border-orange-100 space-y-1">
+                                                                                {names.map((name, idx) => (
+                                                                                    <div key={idx} className="flex items-center gap-3 flex-wrap">
+                                                                                        {idx === 0 && <span className="font-semibold text-orange-700">🏢 미디어</span>}
+                                                                                        {idx > 0 && <span className="w-[52px]" />}
+                                                                                        <span><b>{name}</b></span>
+                                                                                        {counts[idx] && <span className="text-gray-500">{counts[idx]}대</span>}
+                                                                                        {prices[idx] && <span className="text-gray-500">{formatCurrency(parseInt(prices[idx]))}원</span>}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )
+                                                                    })()}
 
                                                                     {/* 덧글이 있을 경우만 표시 (특이사항 본문 제외, 덧글만 추출) */}
                                                                     {sale.specialNotes && (() => {
