@@ -86,7 +86,8 @@ export async function GET(request: NextRequest) {
       const salesType = row[3] || ''
       const clientName = (row[4] || '').trim()
       const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0
-      const totalAmount = contractAmount // 내무부는 외주비 차감 없음
+      const paymentMethod = row[8] || ''
+      const totalAmount = paymentMethod === '입금예정' ? 0 : contractAmount // 내무부는 외주비 차감 없음
 
       // 날짜 확인 (내무부: A열 타임스탬프 기준)
       let isTargetMonth = false

@@ -73,9 +73,14 @@ export async function GET(request: NextRequest) {
         const aeName = normalizeStaffName(row[2] || '') // C열: 담당자
         const salesType = row[3] || '' // D열: 매출 유형
         const clientName = (row[4] || '').trim() // E열: 광고주명
+        const paymentMethod = row[8] || '' // I열: 결제방식
+
+        // 입금예정인 경우 금액 0으로 처리 (입금완료 전까지 실적 미반영)
+        const isPaymentPending = paymentMethod === '입금예정'
 
         // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
-        const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+        const calculatedAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+        const actualAmount = isPaymentPending ? 0 : calculatedAmount
 
         // 날짜 파싱 (월별 그룹화를 위해)
         let saleMonth: string | null = null

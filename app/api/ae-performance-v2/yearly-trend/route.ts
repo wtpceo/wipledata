@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
             if (!aeName) return
 
             const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0
-            const totalAmount = contractAmount // 내무부은 아웃소싱 비용 차감 안 함
+            const paymentMethod = row[8] || ''
+            const totalAmount = paymentMethod === '입금예정' ? 0 : contractAmount // 내무부은 아웃소싱 비용 차감 안 함
 
             let targetMonth = ''
             const timestamp = row[0] || ''

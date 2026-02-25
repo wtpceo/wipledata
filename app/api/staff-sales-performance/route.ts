@@ -17,8 +17,12 @@ export async function GET(request: NextRequest) {
       const contractAmount = parseFloat(String(row[7] || '0').replace(/[^\d.-]/g, '')) || 0
       const outsourcingCost = parseFloat(String(row[10] || '0').replace(/[^\d.-]/g, '')) || 0
 
+      // 입금예정인 경우 금액 0으로 처리 (입금완료 전까지 실적 미반영)
+      const isPaymentPending = (row[8] || '') === '입금예정'
+
       // 영업부는 총계약금액 - 외주비, 나머지는 총계약금액
-      const actualAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+      const calculatedAmount = department === '영업부' ? (contractAmount - outsourcingCost) : contractAmount
+      const actualAmount = isPaymentPending ? 0 : calculatedAmount
 
       return {
         timestamp: row[0] || '',
@@ -37,8 +41,8 @@ export async function GET(request: NextRequest) {
         contractFile: row[13] || '',
         contractDate: row[14] || '',
         contractEndDate: row[15] || '',
-        monthlyAmount: parseFloat(String(row[16] || '0').replace(/[^\d.-]/g, '')) || 0,
-        netProfit: parseFloat(String(row[17] || '0').replace(/[^\d.-]/g, '')) || 0,
+        monthlyAmount: isPaymentPending ? 0 : (parseFloat(String(row[16] || '0').replace(/[^\d.-]/g, '')) || 0),
+        netProfit: isPaymentPending ? 0 : (parseFloat(String(row[17] || '0').replace(/[^\d.-]/g, '')) || 0),
         inputYearMonth: row[18] || '',
         quarter: row[19] || ''
       }
