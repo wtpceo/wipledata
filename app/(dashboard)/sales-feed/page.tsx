@@ -477,6 +477,12 @@ export default function SalesFeedPage() {
                                                                         </span>
                                                                         <span className="text-[11px] text-gray-400">·</span>
                                                                         <span className="text-[11px] font-medium text-gray-500">{formatCurrency(sale.totalAmount)}</span>
+                                                                        {sale.paymentMethod === '입금예정' && (
+                                                                            <>
+                                                                                <span className="text-[11px] text-gray-400">·</span>
+                                                                                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">입금예정</span>
+                                                                            </>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>
