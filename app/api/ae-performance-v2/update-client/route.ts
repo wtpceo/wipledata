@@ -148,14 +148,16 @@ async function handleRenewalSuccess(
     '', // W: 점검 일시
     '', // X: 광고주 주소
     '', // Y: 광고주 연락처
-    '', // Z: 단지명
-    '', // AA: 설치대수
-    '', // AB: 대당단가
-    finalPaymentMethod === '입금예정' ? (depositorName || '') : '', // AC: 입금자명
+    '', // Z: 점검상태
+    '', // AA: 처리메모
+    '', // AB: 단지명
+    '', // AC: 설치대수
+    '', // AD: 대당단가
+    finalPaymentMethod === '입금예정' ? (depositorName || '') : '', // AE: 입금자명
   ]
 
   // 원본데이터 탭에 저장
-  await writeToSheet('원본데이터!A:AC', [rawDataRow])
+  await writeToSheet('원본데이터!A:AE', [rawDataRow])
 
   return { success: true, newEndDate: formatDate(newEndDate) }
 }

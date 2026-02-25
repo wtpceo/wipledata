@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
     try {
-        const data = await readFromSheet('원본데이터!A2:AC')
+        const data = await readFromSheet('원본데이터!A2:AE')
 
         const feedData = data
             .map((row, index) => {
@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
                 const contractDate = timestamp ? timestamp.split('T')[0] : (row[14] || '')
                 const inputMonth = row[18] || ''
 
-                // 미디어 계약 정보 (Z/AA/AB 열)
-                const mediaComplexName = row[25] || ''
-                const mediaInstallCount = row[26] || ''
-                const mediaUnitPrice = row[27] || ''
-                const depositorName = row[28] || '' // AC열: 입금자명
+                // 미디어 계약 정보 (AB/AC/AD 열)
+                const mediaComplexName = row[27] || '' // AB: 단지명
+                const mediaInstallCount = row[28] || '' // AC: 설치대수
+                const mediaUnitPrice = row[29] || '' // AD: 대당단가
+                const depositorName = row[30] || '' // AE: 입금자명
 
                 return {
                     id: `feed-${index}`,
