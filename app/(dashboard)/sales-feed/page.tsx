@@ -425,7 +425,7 @@ export default function SalesFeedPage() {
                                 <span>상세 계약 내역</span>
                                 <span>{todaysSales.length}건</span>
                             </div>
-                            <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-2 pb-2 custom-scrollbar">
+                            <div className="flex flex-col gap-3 max-h-[calc(100vh-320px)] min-h-[300px] overflow-y-auto pr-2 pb-2 custom-scrollbar">
                                 {todaysSales.length > 0 ? (
                                     (() => {
                                         // 담당자별 그룹핑
