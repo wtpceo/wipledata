@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
     try {
-        const data = await readFromSheet('원본데이터!A2:Y')
+        const data = await readFromSheet('원본데이터!A2:AB')
 
         const feedData = data
             .map((row, index) => {
@@ -26,9 +26,14 @@ export async function GET(request: NextRequest) {
                 const contractDate = timestamp ? timestamp.split('T')[0] : (row[14] || '')
                 const inputMonth = row[18] || ''
 
+                // 미디어 계약 정보 (Z/AA/AB 열)
+                const mediaComplexName = row[25] || ''
+                const mediaInstallCount = row[26] || ''
+                const mediaUnitPrice = row[27] || ''
+
                 return {
                     id: `feed-${index}`,
-                    rowIndex: index + 2, // 1-based index and skipping header
+                    rowIndex: index + 2,
                     timestamp,
                     department,
                     inputPerson,
@@ -42,7 +47,10 @@ export async function GET(request: NextRequest) {
                     consultationContent,
                     specialNotes,
                     contractDate,
-                    inputMonth
+                    inputMonth,
+                    mediaComplexName,
+                    mediaInstallCount,
+                    mediaUnitPrice,
                 }
             })
             .filter(item => {

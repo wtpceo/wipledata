@@ -103,6 +103,11 @@ export async function POST(request: NextRequest) {
       // 섹션 5: 온라인 점검 (옥외매체 전용)
       onlineCheckRequested,
       onlineCheckDateTime,
+
+      // 미디어 계약 정보
+      mediaComplexName,
+      mediaInstallCount,
+      mediaUnitPrice,
     } = body
 
     // 현재 날짜와 시간
@@ -201,6 +206,9 @@ export async function POST(request: NextRequest) {
       onlineCheckDateTime || '', // W: 온라인 점검 희망 일시
       clientAddress || '', // X: 광고주 주소
       clientContact || '', // Y: 광고주 연락처
+      mediaComplexName || '', // Z: 단지명
+      mediaInstallCount ? mediaInstallCount.toString() : '', // AA: 설치대수
+      mediaUnitPrice ? mediaUnitPrice.toString() : '', // AB: 대당단가
     ]
 
     // Sales 시트와 원본데이터 탭에 동시에 쓰기
@@ -211,7 +219,7 @@ export async function POST(request: NextRequest) {
 
       const results = await Promise.all([
         writeToSheet(`${SHEETS.SALES}!A:V`, [salesRow]),
-        writeToSheet('원본데이터!A:Y', [rawDataRow])
+        writeToSheet('원본데이터!A:AB', [rawDataRow])
       ])
 
       console.log('✅ Successfully written to both sheets')

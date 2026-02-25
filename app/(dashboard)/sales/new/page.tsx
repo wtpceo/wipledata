@@ -61,6 +61,11 @@ export default function NewSalePage() {
     onlineCheckMonth: '',
     onlineCheckDay: '',
     onlineCheckHour: '',
+
+    // 미디어 계약 정보
+    mediaComplexName: '', // 단지명
+    mediaInstallCount: '', // 설치대수(수량)
+    mediaUnitPrice: '', // 대당단가
   })
 
   // 옥외매체가 선택되었는지 확인
@@ -143,6 +148,9 @@ export default function NewSalePage() {
           contractMonths: hasRegularMedia ? parseInt(formData.contractMonths) : 0,
           contractWeeks: hasOutdoorMedia ? parseInt(formData.contractWeeks) : 0,
           onlineCheckDateTime,
+          mediaComplexName: formData.mediaComplexName || '',
+          mediaInstallCount: formData.mediaInstallCount || '',
+          mediaUnitPrice: formData.mediaUnitPrice ? parseInt(formData.mediaUnitPrice.replace(/,/g, '')) : 0,
         }),
       })
 
@@ -428,6 +436,63 @@ export default function NewSalePage() {
           </CardContent>
         </Card>
 
+        {/* 미디어 계약 정보 (옥외매체 선택 시 표시) */}
+        {hasOutdoorMedia && (
+          <Card className="border-orange-200 bg-orange-50/30">
+            <CardHeader>
+              <CardTitle className="text-lg text-orange-700 flex items-center gap-2">
+                🏢 미디어 계약 정보 (옥외매체)
+              </CardTitle>
+              <CardDescription>
+                포커스미디어/타운보드 계약 시 아래 항목을 입력해주세요.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="mediaComplexName">단지명</Label>
+                <Input
+                  id="mediaComplexName"
+                  name="mediaComplexName"
+                  type="text"
+                  value={formData.mediaComplexName}
+                  onChange={handleInputChange}
+                  placeholder="예: OO아파트"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mediaInstallCount">설치대수 (수량)</Label>
+                <Input
+                  id="mediaInstallCount"
+                  name="mediaInstallCount"
+                  type="number"
+                  min="1"
+                  value={formData.mediaInstallCount}
+                  onChange={handleInputChange}
+                  placeholder="예: 10"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mediaUnitPrice">대당단가</Label>
+                <Input
+                  id="mediaUnitPrice"
+                  name="mediaUnitPrice"
+                  type="text"
+                  value={formData.mediaUnitPrice}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      mediaUnitPrice: formatCurrency(e.target.value),
+                    })
+                  }}
+                  placeholder="0"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* 섹션 3: 결제 정보 */}
         <Card>
           <CardHeader>
@@ -534,7 +599,6 @@ export default function NewSalePage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Label htmlFor="specialNotes">특이사항</Label>
-                <span className="text-sm text-destructive font-bold">( 단지명 / 대수 / 대당단가 입력 ) *미디어 계약 필수 입력*</span>
               </div>
               <Textarea
                 id="specialNotes"

@@ -184,83 +184,114 @@ export default function SalesFeedPage() {
                             {loading ? '로딩 중...' : '새로고침'}
                         </Button>
                     </CardHeader>
-                    <CardContent className="p-4 h-[calc(100vh-280px)] min-h-[500px] overflow-y-auto flex flex-col gap-5">
+                    <CardContent className="p-4 h-[calc(100vh-280px)] min-h-[500px] overflow-y-auto flex flex-col gap-2">
                         {data && data.length > 0 ? (
-                            data.map((sale) => {
-                                const deptStyle = getDeptStyles(sale.inputPerson, sale.department)
-                                return (
-                                    <div key={sale.id} className="flex gap-3 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                        <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-lg font-bold shadow-sm border ${deptStyle.bg} ${deptStyle.border} ${deptStyle.text}`}>
-                                            {sale.inputPerson?.charAt(0) || '👤'}
-                                        </div>
-                                        <div className="flex flex-col max-w-[90%] w-full">
-                                            <span className={`text-[15px] mb-1 ml-1 font-bold ${deptStyle.text}`}>
-                                                {sale.inputPerson} <span className="text-xs font-normal opacity-70">({sale.department})</span>
-                                            </span>
-                                            <div className="bg-white px-4 py-4 rounded-2xl rounded-tl-sm shadow-sm text-base whitespace-pre-line text-gray-800 leading-relaxed font-normal">
-                                                <div className="font-semibold text-[17px] flex items-center gap-2 mb-2 flex-wrap">
-                                                    {sale.contractType === '연장' ? (
-                                                        <span className="text-blue-600 bg-blue-50 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-blue-100">[연장]</span>
-                                                    ) : sale.contractType === '신규' ? (
-                                                        <span className="text-pink-600 bg-pink-50 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-pink-100">[신규]</span>
-                                                    ) : sale.contractType ? (
-                                                        <span className="text-gray-600 bg-gray-100 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-gray-200">[{sale.contractType}]</span>
-                                                    ) : null}
-                                                    <span className="tracking-tight">{sale.productName ? `${sale.productName}) ` : ''}{sale.clientName}</span>
-                                                </div>
+                            (() => {
+                                // 날짜별 그룹핑
+                                const grouped: Record<string, any[]> = {}
+                                data.forEach(sale => {
+                                    const dateKey = sale.contractDate || sale.timestamp?.split('T')[0] || '날짜없음'
+                                    if (!grouped[dateKey]) grouped[dateKey] = []
+                                    grouped[dateKey].push(sale)
+                                })
 
-                                                <div className="text-[15px] bg-[#f8fafc] px-4 py-3 rounded-md border border-slate-100 inline-block w-full">
-                                                    {sale.contractPeriod ? <span className="mr-4"><b>계약기간:</b> {sale.contractPeriod}</span> : ''}
-                                                    <span className={sale.totalAmount > 0 ? 'text-blue-700 font-medium' : ''}><b>금액:</b> {formatCurrency(sale.totalAmount)}</span>
-                                                    {sale.paymentMethod === '입금예정' ? (
-                                                        <span className="ml-2 text-orange-600 bg-orange-50 px-2 py-0.5 rounded text-xs font-semibold border border-orange-200">⏳ 입금예정</span>
-                                                    ) : sale.paymentMethod === '입금확인' ? (
-                                                        <span className="ml-2 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold border border-emerald-200">✅ 입금확인</span>
-                                                    ) : sale.paymentMethod ? (
-                                                        <span className="ml-2 text-gray-500"> / {sale.paymentMethod}{sale.approvalNum && sale.approvalNum.trim() !== '' ? ` (승인번호: ${sale.approvalNum})` : ''}</span>
-                                                    ) : null}
-                                                </div>
+                                const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a))
 
-                                                {sale.specialNotes && (
-                                                    <div className="mt-4 pt-4 border-t border-dashed border-gray-200 text-[14.5px] text-gray-700">
-                                                        <div className="mt-3 text-red-800 bg-red-50/50 p-3 rounded-md border border-red-50">
-                                                            <span className="font-semibold text-red-600 flex items-center gap-1.5">🚨 입금현황 및 특이사항:</span>
-                                                            <div className="mt-2 pl-1 whitespace-pre-wrap leading-[1.6] font-medium text-red-900/90">
-                                                                {/* 기본 특이사항과 덧글을 분리해서 렌더링 */}
-                                                                {(() => {
-                                                                    const notesString = sale.specialNotes as string;
-                                                                    const replyRegex = /\n\n\[\u21aa (.*?) 님의 덧글 - (.*?)\]\n([\s\S]*?)(?=\n\n\[\u21aa|$)/g;
+                                return sortedDates.map(dateKey => {
+                                    const salesInDate = grouped[dateKey]
+                                    const dateObj = new Date(dateKey)
+                                    const isValidDate = !isNaN(dateObj.getTime())
+                                    const displayDate = isValidDate
+                                        ? `${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일 (${['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()]})`
+                                        : dateKey
+                                    const dateTotalAmount = salesInDate.reduce((a: number, s: any) => a + s.totalAmount, 0)
 
-                                                                    // 특이사항 본문 (첫 덧글 이전 텍스트)
-                                                                    const mainTextMatch = notesString.split('\n\n[↪')[0];
-                                                                    const mainText = mainTextMatch ? mainTextMatch.trim() : notesString;
+                                    return (
+                                        <div key={dateKey} className="mb-2">
+                                            {/* 날짜 헤더 */}
+                                            <div className="sticky top-0 z-10 flex items-center gap-3 py-2.5 px-1 mb-2">
+                                                <div className="h-px flex-1 bg-gray-300" />
+                                                <span className="text-[13px] font-bold text-gray-600 bg-[#ebedf0] px-3 py-1 rounded-full whitespace-nowrap shadow-sm border border-gray-200">
+                                                    📅 {displayDate} · {salesInDate.length}건 · {formatCurrency(dateTotalAmount)}
+                                                </span>
+                                                <div className="h-px flex-1 bg-gray-300" />
+                                            </div>
 
-                                                                    // 덧글 매칭
-                                                                    const replyMatches = [...notesString.matchAll(replyRegex)];
+                                            <div className="flex flex-col gap-5">
+                                                {salesInDate.map((sale) => {
+                                                    const deptStyle = getDeptStyles(sale.inputPerson, sale.department)
+                                                    return (
+                                                        <div key={sale.id} className="flex gap-3 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                                            <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-lg font-bold shadow-sm border ${deptStyle.bg} ${deptStyle.border} ${deptStyle.text}`}>
+                                                                {sale.inputPerson?.charAt(0) || '👤'}
+                                                            </div>
+                                                            <div className="flex flex-col max-w-[90%] w-full">
+                                                                <span className={`text-[15px] mb-1 ml-1 font-bold ${deptStyle.text}`}>
+                                                                    {sale.inputPerson} <span className="text-xs font-normal opacity-70">({sale.department})</span>
+                                                                </span>
+                                                                <div className="bg-white px-4 py-4 rounded-2xl rounded-tl-sm shadow-sm text-base whitespace-pre-line text-gray-800 leading-relaxed font-normal">
+                                                                    <div className="font-semibold text-[17px] flex items-center gap-2 mb-2 flex-wrap">
+                                                                        {sale.contractType === '연장' ? (
+                                                                            <span className="text-blue-600 bg-blue-50 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-blue-100">[연장]</span>
+                                                                        ) : sale.contractType === '신규' ? (
+                                                                            <span className="text-pink-600 bg-pink-50 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-pink-100">[신규]</span>
+                                                                        ) : sale.contractType ? (
+                                                                            <span className="text-gray-600 bg-gray-100 px-2 flex items-center h-6 rounded text-sm whitespace-nowrap border border-gray-200">[{sale.contractType}]</span>
+                                                                        ) : null}
+                                                                        <span className="tracking-tight">{sale.productName ? `${sale.productName}) ` : ''}{sale.clientName}</span>
+                                                                    </div>
 
-                                                                    const deleteReply = async (replyString: string, rowIndex: number) => {
-                                                                        if (!confirm('이 덧글을 삭제하시겠습니까?')) return;
-                                                                        try {
-                                                                            const response = await fetch('/api/sales-feed/reply/delete', {
-                                                                                method: 'POST',
-                                                                                headers: { 'Content-Type': 'application/json' },
-                                                                                body: JSON.stringify({ rowIndex, replyString })
-                                                                            });
-                                                                            if (response.ok) {
-                                                                                await fetchSalesFeed();
-                                                                            } else {
-                                                                                alert('삭제에 실패했습니다.');
+                                                                    <div className="text-[15px] bg-[#f8fafc] px-4 py-3 rounded-md border border-slate-100 inline-block w-full">
+                                                                        {sale.contractPeriod ? <span className="mr-4"><b>계약기간:</b> {sale.contractPeriod}</span> : ''}
+                                                                        <span className={sale.totalAmount > 0 ? 'text-blue-700 font-medium' : ''}><b>금액:</b> {formatCurrency(sale.totalAmount)}</span>
+                                                                        {sale.paymentMethod === '입금예정' ? (
+                                                                            <span className="ml-2 text-orange-600 bg-orange-50 px-2 py-0.5 rounded text-xs font-semibold border border-orange-200">⏳ 입금예정</span>
+                                                                        ) : sale.paymentMethod === '입금확인' ? (
+                                                                            <span className="ml-2 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold border border-emerald-200">✅ 입금확인</span>
+                                                                        ) : sale.paymentMethod ? (
+                                                                            <span className="ml-2 text-gray-500"> / {sale.paymentMethod}{sale.approvalNum && sale.approvalNum.trim() !== '' ? ` (승인번호: ${sale.approvalNum})` : ''}</span>
+                                                                        ) : null}
+                                                                    </div>
+
+                                                                    {/* 미디어 계약 정보 */}
+                                                                    {sale.mediaComplexName && (
+                                                                        <div className="mt-3 text-[14px] bg-orange-50 px-4 py-2.5 rounded-md border border-orange-100 flex items-center gap-4 flex-wrap">
+                                                                            <span className="font-semibold text-orange-700">🏢 미디어</span>
+                                                                            <span><b>단지명:</b> {sale.mediaComplexName}</span>
+                                                                            {sale.mediaInstallCount && <span><b>설치대수:</b> {sale.mediaInstallCount}대</span>}
+                                                                            {sale.mediaUnitPrice && <span><b>대당단가:</b> {formatCurrency(parseInt(sale.mediaUnitPrice))}</span>}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* 덧글이 있을 경우만 표시 (특이사항 본문 제외, 덧글만 추출) */}
+                                                                    {sale.specialNotes && (() => {
+                                                                        const notesString = sale.specialNotes as string;
+                                                                        const replyRegex = /\n\n\[\u21aa (.*?) 님의 덧글 - (.*?)\]\n([\s\S]*?)(?=\n\n\[\u21aa|$)/g;
+                                                                        const replyMatches = [...notesString.matchAll(replyRegex)];
+
+                                                                        const deleteReply = async (replyString: string, rowIndex: number) => {
+                                                                            if (!confirm('이 덧글을 삭제하시겠습니까?')) return;
+                                                                            try {
+                                                                                const response = await fetch('/api/sales-feed/reply/delete', {
+                                                                                    method: 'POST',
+                                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                                    body: JSON.stringify({ rowIndex, replyString })
+                                                                                });
+                                                                                if (response.ok) {
+                                                                                    await fetchSalesFeed();
+                                                                                } else {
+                                                                                    alert('삭제에 실패했습니다.');
+                                                                                }
+                                                                            } catch (error) {
+                                                                                alert('오류가 발생했습니다.');
                                                                             }
-                                                                        } catch (error) {
-                                                                            alert('오류가 발생했습니다.');
-                                                                        }
-                                                                    };
+                                                                        };
 
-                                                                    return (
-                                                                        <>
-                                                                            <div>{mainText}</div>
-                                                                            {replyMatches.length > 0 && (
-                                                                                <div className="mt-4 space-y-3">
+                                                                        if (replyMatches.length === 0) return null;
+
+                                                                        return (
+                                                                            <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                                                                                <div className="space-y-3">
                                                                                     {replyMatches.map((match, i) => {
                                                                                         const fullMatchString = match[0];
                                                                                         const author = match[1];
@@ -268,7 +299,7 @@ export default function SalesFeedPage() {
                                                                                         const content = match[3];
                                                                                         return (
                                                                                             <div key={i} className="flex gap-2">
-                                                                                                <div className="bg-white/80 border border-red-100 rounded-lg p-3 flex-1 shadow-sm relative group">
+                                                                                                <div className="bg-indigo-50/80 border border-indigo-100 rounded-lg p-3 flex-1 shadow-sm relative group">
                                                                                                     <div className="flex justify-between items-start mb-1">
                                                                                                         <span className="font-bold text-gray-700 text-[13px]">{author}</span>
                                                                                                         <span className="text-gray-400 text-[11px]">{date}</span>
@@ -287,62 +318,62 @@ export default function SalesFeedPage() {
                                                                                         )
                                                                                     })}
                                                                                 </div>
-                                                                            )}
-                                                                        </>
-                                                                    )
-                                                                })()}
+                                                                            </div>
+                                                                        )
+                                                                    })()}
+
+                                                                    {/* 덧글 섹션 (Reply Section) */}
+                                                                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="text-gray-500 hover:text-gray-800 hover:bg-gray-100 p-2 h-auto rounded-md transition-colors"
+                                                                            onClick={() => setActiveReplyId(activeReplyId === sale.id ? null : sale.id)}
+                                                                        >
+                                                                            <MessageSquare className="w-4 h-4 mr-2" />
+                                                                            {activeReplyId === sale.id ? '답장 접기' : '답장 달기 (시트 동기화)'}
+                                                                        </Button>
+                                                                    </div>
+
+                                                                    {activeReplyId === sale.id && (
+                                                                        <div className="mt-3 bg-gray-50/80 p-3.5 rounded-lg border border-gray-200 shadow-sm flex flex-col gap-2">
+                                                                            <div className="flex gap-2">
+                                                                                <Input
+                                                                                    placeholder="직원 이름"
+                                                                                    className="w-28 bg-white border-gray-300 pointer-events-none opacity-80"
+                                                                                    value={replyName}
+                                                                                    readOnly
+                                                                                    maxLength={10}
+                                                                                />
+                                                                                <Input
+                                                                                    placeholder="답장 및 코멘트를 입력하세요 (특이사항 하단에 추가됩니다)..."
+                                                                                    className="flex-1 bg-white border-gray-300"
+                                                                                    value={replyText}
+                                                                                    onChange={(e) => setReplyText(e.target.value)}
+                                                                                    onKeyDown={(e) => {
+                                                                                        if (e.key === 'Enter') submitReply(sale.rowIndex, sale.id)
+                                                                                    }}
+                                                                                />
+                                                                                <Button size="icon" className="bg-indigo-600 hover:bg-indigo-700" onClick={() => submitReply(sale.rowIndex, sale.id)} disabled={isSubmittingReply}>
+                                                                                    <Send className="w-4 h-4" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[11px] text-gray-400 mt-2 ml-1 flex items-center gap-2 tracking-wide font-medium">
+                                                                    작성: {sale.timestamp ? new Date(sale.timestamp.replace(/\./g, '-')).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                                                                    {sale.contractDate ? ` ǀ 계약일: ${sale.contractDate}` : ''}
+                                                                </span>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                )}
-
-                                                {/* 덧글 섹션 (Reply Section) */}
-                                                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-gray-500 hover:text-gray-800 hover:bg-gray-100 p-2 h-auto rounded-md transition-colors"
-                                                        onClick={() => setActiveReplyId(activeReplyId === sale.id ? null : sale.id)}
-                                                    >
-                                                        <MessageSquare className="w-4 h-4 mr-2" />
-                                                        {activeReplyId === sale.id ? '답장 접기' : '답장 달기 (시트 동기화)'}
-                                                    </Button>
-                                                </div>
-
-                                                {activeReplyId === sale.id && (
-                                                    <div className="mt-3 bg-gray-50/80 p-3.5 rounded-lg border border-gray-200 shadow-sm flex flex-col gap-2">
-                                                        <div className="flex gap-2">
-                                                            <Input
-                                                                placeholder="직원 이름"
-                                                                className="w-28 bg-white border-gray-300 pointer-events-none opacity-80"
-                                                                value={replyName}
-                                                                readOnly
-                                                                maxLength={10}
-                                                            />
-                                                            <Input
-                                                                placeholder="답장 및 코멘트를 입력하세요 (특이사항 하단에 추가됩니다)..."
-                                                                className="flex-1 bg-white border-gray-300"
-                                                                value={replyText}
-                                                                onChange={(e) => setReplyText(e.target.value)}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') submitReply(sale.rowIndex, sale.id)
-                                                                }}
-                                                            />
-                                                            <Button size="icon" className="bg-indigo-600 hover:bg-indigo-700" onClick={() => submitReply(sale.rowIndex, sale.id)} disabled={isSubmittingReply}>
-                                                                <Send className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                    )
+                                                })}
                                             </div>
-                                            <span className="text-[11px] text-gray-400 mt-2 ml-1 flex items-center gap-2 tracking-wide font-medium">
-                                                작성: {sale.timestamp ? new Date(sale.timestamp.replace(/\./g, '-')).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
-                                                {sale.contractDate ? ` ǀ 계약일: ${sale.contractDate}` : ''}
-                                            </span>
                                         </div>
-                                    </div>
-                                )
-                            })
+                                    )
+                                })
+                            })()
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400 pb-10">
                                 {loading ? (
