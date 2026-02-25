@@ -189,7 +189,7 @@ export default function SalesFeedPage() {
                             {loading ? '로딩 중...' : '새로고침'}
                         </Button>
                     </CardHeader>
-                    <CardContent className="p-4 h-[calc(100vh-280px)] min-h-[500px] overflow-y-auto flex flex-col gap-2">
+                    <CardContent className="p-4 h-[calc(100vh-180px)] min-h-[700px] overflow-y-auto flex flex-col gap-2">
                         {data && data.length > 0 ? (
                             (() => {
                                 // 날짜별 그룹핑
