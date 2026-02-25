@@ -134,8 +134,21 @@ export async function POST(request: NextRequest) {
       ? `${contractWeeks}주`
       : contractMonths ? `${contractMonths}개월` : ''
 
+    // 계산 필드 (salesRow, rawDataRow 공용)
+    const effectiveMonths = contractMonths || (contractWeeks ? Math.ceil(contractWeeks / 4) : 1)
+    const monthlyAmount = Math.round(totalAmount / effectiveMonths)
+    const netProfit = totalAmount - (outsourcingCost || 0)
+    const contractEndDate = new Date(contractDate)
+    if (isOutdoorMedia && contractWeeks) {
+      contractEndDate.setDate(contractEndDate.getDate() + (contractWeeks * 7))
+    } else {
+      contractEndDate.setMonth(contractEndDate.getMonth() + (contractMonths || 0))
+    }
+    const inputYearMonth = contractDate.substring(0, 7) // YYYY-MM
+    const quarter = `${contractDate.substring(0, 4)}-Q${Math.ceil((new Date(contractDate).getMonth() + 1) / 3)}`
+
     // Google Sheets에 데이터 쓰기
-    // Sales 시트 컬럼 구조 (원본데이터와 동일하게 맞춤)
+    // Sales 시트 컬럼 구조 (A:AC, 원본데이터와 동일하게 맞춤)
     const salesRow = [
       contractDate,
       department,
@@ -158,24 +171,15 @@ export async function POST(request: NextRequest) {
       onlineCheckDateTime || '', // 온라인 점검 희망 일시
       clientAddress || '', // 광고주 주소
       clientContact || '', // 광고주 연락처
+      mediaComplexName || '', // V: 단지명
+      mediaInstallCount ? mediaInstallCount.toString() : '', // W: 설치대수
+      mediaUnitPrice ? mediaUnitPrice.toString() : '', // X: 대당단가
+      depositorName || '', // Y: 입금자명
+      contractEndDate.toISOString().split('T')[0], // Z: 계약종료일
+      monthlyAmount.toString(), // AA: 월평균금액
+      netProfit.toString(), // AB: 순수익
+      inputYearMonth, // AC: 입력년월
     ]
-
-    // 원본데이터 탭 구조 (스크린샷 기준)
-    // 타임스탬프, 부서, 입력자, 매출 유형, 광고주 업체명, 마케팅 매체 상품명,
-    // 계약 개월 수, 총 계약금액, 결제 방식, 결제 승인 번호,
-    // 확정 외주비, 광고주 상담 내용, 특이사항, 계약서 파일및 기타 자료,
-    // 계약날짜, 계약종료일, 월 평균 금액, 순수익, 입력 년 월, 분기
-    const effectiveMonths = contractMonths || (contractWeeks ? Math.ceil(contractWeeks / 4) : 1)
-    const monthlyAmount = Math.round(totalAmount / effectiveMonths)
-    const netProfit = totalAmount - (outsourcingCost || 0)
-    const contractEndDate = new Date(contractDate)
-    if (isOutdoorMedia && contractWeeks) {
-      contractEndDate.setDate(contractEndDate.getDate() + (contractWeeks * 7))
-    } else {
-      contractEndDate.setMonth(contractEndDate.getMonth() + (contractMonths || 0))
-    }
-    const inputYearMonth = contractDate.substring(0, 7) // YYYY-MM
-    const quarter = `${contractDate.substring(0, 4)}-Q${Math.ceil((new Date(contractDate).getMonth() + 1) / 3)}`
 
     // 원본데이터 시트 컬럼 구조 (실제 시트 기준)
     // A: 타임스탬프, B: 부서, C: 입력자, D: 매출유형, E: 광고주명,
@@ -222,8 +226,8 @@ export async function POST(request: NextRequest) {
       console.log('Raw data row:', rawDataRow)
 
       const results = await Promise.all([
-        writeToSheet(`${SHEETS.SALES}!A:V`, [salesRow]),
-        writeToSheet('원본데이터!A:AB', [rawDataRow])
+        writeToSheet(`${SHEETS.SALES}!A:AC`, [salesRow]),
+        writeToSheet('원본데이터!A:AC', [rawDataRow])
       ])
 
       console.log('✅ Successfully written to both sheets')
