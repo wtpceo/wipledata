@@ -159,10 +159,10 @@ export default function NewSalePage() {
           contractMonths: hasRegularMedia ? parseInt(formData.contractMonths) : 0,
           contractWeeks: hasOutdoorMedia ? parseInt(formData.contractWeeks) : 0,
           onlineCheckDateTime,
-          // 미디어 계약 정보: 여러 단지를 | 구분자로 직렬화
-          mediaComplexName: mediaContracts.map(m => m.complexName).filter(Boolean).join(' | '),
-          mediaInstallCount: mediaContracts.map(m => m.installCount).filter(Boolean).join(' | '),
-          mediaUnitPrice: mediaContracts.map(m => m.unitPrice ? parseInt(m.unitPrice.replace(/,/g, '')) : 0).filter(v => v > 0).join(' | '),
+          // 미디어 계약 정보: 여러 단지를 줄바꿈으로 직렬화 (셀 내 줄바꿈)
+          mediaComplexName: mediaContracts.map(m => m.complexName).filter(Boolean).join('\n'),
+          mediaInstallCount: mediaContracts.map(m => m.installCount).filter(Boolean).join('\n'),
+          mediaUnitPrice: mediaContracts.map(m => m.unitPrice ? parseInt(m.unitPrice.replace(/,/g, '')) : 0).filter(v => v > 0).join('\n'),
         }),
       })
 

@@ -172,8 +172,8 @@ export async function POST(request: NextRequest) {
       clientAddress || '', // 광고주 주소
       clientContact || '', // 광고주 연락처
       mediaComplexName || '', // V: 단지명
-      mediaInstallCount ? mediaInstallCount.toString() : '', // W: 설치대수
-      mediaUnitPrice ? mediaUnitPrice.toString() : '', // X: 대당단가
+      mediaInstallCount ? `'${mediaInstallCount.toString()}` : '', // W: 설치대수 (아포스트로피로 텍스트 강제)
+      mediaUnitPrice ? `'${mediaUnitPrice.toString()}` : '', // X: 대당단가 (아포스트로피로 텍스트 강제)
       depositorName || '', // Y: 입금자명
       contractEndDate.toISOString().split('T')[0], // Z: 계약종료일
       monthlyAmount.toString(), // AA: 월평균금액
@@ -216,8 +216,8 @@ export async function POST(request: NextRequest) {
       '', // Z: 점검상태
       '', // AA: 처리메모
       mediaComplexName || '', // AB: 단지명
-      mediaInstallCount ? mediaInstallCount.toString() : '', // AC: 설치대수
-      mediaUnitPrice ? mediaUnitPrice.toString() : '', // AD: 대당단가
+      mediaInstallCount ? `'${mediaInstallCount.toString()}` : '', // AC: 설치대수 (아포스트로피로 텍스트 강제)
+      mediaUnitPrice ? `'${mediaUnitPrice.toString()}` : '', // AD: 대당단가 (아포스트로피로 텍스트 강제)
       depositorName || '', // AE: 입금자명
     ]
 

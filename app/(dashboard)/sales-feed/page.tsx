@@ -263,9 +263,9 @@ export default function SalesFeedPage() {
 
                                                                     {/* 미디어 계약 정보 */}
                                                                     {sale.mediaComplexName && (() => {
-                                                                        const names = (sale.mediaComplexName as string).split(' | ')
-                                                                        const counts = sale.mediaInstallCount ? (sale.mediaInstallCount as string).split(' | ') : []
-                                                                        const prices = sale.mediaUnitPrice ? (sale.mediaUnitPrice as string).split(' | ') : []
+                                                                        const names = (sale.mediaComplexName as string).split('\n')
+                                                                        const counts = sale.mediaInstallCount ? (sale.mediaInstallCount as string).split('\n') : []
+                                                                        const prices = sale.mediaUnitPrice ? (sale.mediaUnitPrice as string).split('\n') : []
                                                                         return (
                                                                             <div className="mt-2 text-[12px] bg-orange-50 px-3 py-1.5 rounded-md border border-orange-100 space-y-1">
                                                                                 {names.map((name, idx) => (
