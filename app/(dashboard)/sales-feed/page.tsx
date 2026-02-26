@@ -139,11 +139,36 @@ export default function SalesFeedPage() {
             dateStr.replace(/\s/g, '').startsWith(`${year}.${todayDate.getMonth() + 1}.${todayDate.getDate()}`);
     }
 
+    const isThisMonth = (dateStr: string) => {
+        if (!dateStr) return false
+        const prefix = `${year}-${month}`
+        const dotPrefix1 = `${year}. ${todayDate.getMonth() + 1}.`
+        const dotPrefix2 = `${year}. ${month}.`
+        return dateStr.startsWith(prefix) ||
+            dateStr.startsWith(dotPrefix1) ||
+            dateStr.startsWith(dotPrefix2) ||
+            dateStr.replace(/\s/g, '').startsWith(`${year}.${month}.`) ||
+            dateStr.replace(/\s/g, '').startsWith(`${year}.${todayDate.getMonth() + 1}.`)
+    }
+
     const todaysSales = allData.filter(sale => isToday(sale.contractDate) || isToday(sale.timestamp))
-    const todaysTotalAmount = todaysSales.reduce((acc, sale) => {
-        if (sale.paymentMethod === '입금예정') return acc
-        return acc + sale.totalAmount
-    }, 0)
+
+    // 이번 달 입금완료/입금확인 건 (오늘 등록 건 제외 → 중복 방지)
+    const thisMonthCompletedSales = allData.filter(sale => {
+        const isCompletedPayment = sale.paymentMethod === '입금완료' || sale.paymentMethod === '입금확인'
+        const isNotToday = !isToday(sale.contractDate) && !isToday(sale.timestamp)
+        const isCurrentMonth = isThisMonth(sale.contractDate) || isThisMonth(sale.timestamp)
+        return isCompletedPayment && isNotToday && isCurrentMonth
+    })
+
+    const todaysTotalAmount =
+        todaysSales.reduce((acc, sale) => {
+            if (sale.paymentMethod === '입금예정') return acc
+            return acc + sale.totalAmount
+        }, 0) +
+        thisMonthCompletedSales.reduce((acc, sale) => acc + sale.totalAmount, 0)
+
+    const totalDisplayCount = todaysSales.length + thisMonthCompletedSales.length
 
     return (
         <div className="space-y-6 max-w-[1400px] mx-auto pb-10 flex flex-col xl:flex-row gap-6">
@@ -424,19 +449,24 @@ export default function SalesFeedPage() {
                                 {formatCurrency(todaysTotalAmount)}
                             </span>
                             <span className="text-[13px] font-semibold text-gray-400 mt-1 flex items-center gap-1.5">
-                                총 <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded leading-none">{todaysSales.length}</span> 건 승인 됨
+                                총 <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded leading-none">{totalDisplayCount}</span> 건 승인 됨
                             </span>
+                            {thisMonthCompletedSales.length > 0 && (
+                                <span className="text-[11px] text-gray-400 mt-0.5">
+                                    오늘 등록 {todaysSales.length}건 + 이번 달 입금완료 {thisMonthCompletedSales.length}건
+                                </span>
+                            )}
                         </div>
 
                         <div className="p-5 bg-white">
+                            {/* 오늘 등록 건 섹션 */}
                             <div className="text-[13px] font-bold text-gray-400 uppercase tracking-wider mb-4 px-1 flex items-center justify-between">
-                                <span>상세 계약 내역</span>
+                                <span>오늘 등록</span>
                                 <span>{todaysSales.length}건</span>
                             </div>
                             <div className="flex flex-col gap-3 pb-2">
                                 {todaysSales.length > 0 ? (
                                     (() => {
-                                        // 담당자별 그룹핑
                                         const groupedByPerson: Record<string, any[]> = {}
                                         todaysSales.forEach((sale) => {
                                             const person = sale.inputPerson || '미지정'
@@ -452,7 +482,6 @@ export default function SalesFeedPage() {
                                             }, 0)
                                             return (
                                                 <div key={`group-${person}`} className="rounded-xl bg-gray-50 border border-gray-100 overflow-hidden">
-                                                    {/* 담당자 헤더 */}
                                                     <div className="flex items-center gap-3 px-3.5 py-3 bg-white border-b border-gray-100">
                                                         <div className={`w-10 h-10 rounded-full font-bold flex items-center justify-center flex-shrink-0 text-sm shadow-sm border ${personStyle.bg} ${personStyle.text} ${personStyle.border}`}>
                                                             {person.charAt(0)}
@@ -465,7 +494,6 @@ export default function SalesFeedPage() {
                                                             <span className="text-[12px] font-semibold text-blue-600 mt-0.5">{formatCurrency(personTotal)}</span>
                                                         </div>
                                                     </div>
-                                                    {/* 계약 목록 */}
                                                     <div className="flex flex-col divide-y divide-gray-100">
                                                         {sales.map((sale) => (
                                                             <div key={`summary-${sale.id}`} className="flex items-center gap-2.5 px-3.5 py-2.5 hover:bg-gray-100/50 transition-colors">
@@ -493,11 +521,71 @@ export default function SalesFeedPage() {
                                         })
                                     })()
                                 ) : (
-                                    <div className="py-10 text-center text-gray-400 text-sm bg-gray-50 rounded-lg border border-dashed border-gray-200 font-medium">
+                                    <div className="py-6 text-center text-gray-400 text-sm bg-gray-50 rounded-lg border border-dashed border-gray-200 font-medium">
                                         오늘 자로 등록된 계약이 없습니다.
                                     </div>
                                 )}
                             </div>
+
+                            {/* 이번 달 입금완료 건 섹션 */}
+                            {thisMonthCompletedSales.length > 0 && (
+                                <>
+                                    <div className="border-t border-dashed border-amber-200 my-3" />
+                                    <div className="text-[13px] font-bold text-amber-600 tracking-wider mb-3 px-1 flex items-center gap-1.5">
+                                        <span className="inline-block w-2 h-2 rounded-full bg-amber-400" />
+                                        이번 달 입금완료 · {thisMonthCompletedSales.length}건
+                                    </div>
+                                    <div className="flex flex-col gap-3 pb-2">
+                                        {(() => {
+                                            const groupedByPerson: Record<string, any[]> = {}
+                                            thisMonthCompletedSales.forEach((sale) => {
+                                                const person = sale.inputPerson || '미지정'
+                                                if (!groupedByPerson[person]) groupedByPerson[person] = []
+                                                groupedByPerson[person].push(sale)
+                                            })
+
+                                            return Object.entries(groupedByPerson).map(([person, sales]) => {
+                                                const personStyle = getDeptStyles(person, sales[0]?.department)
+                                                const personTotal = sales.reduce((acc: number, s: any) => acc + s.totalAmount, 0)
+                                                return (
+                                                    <div key={`completed-${person}`} className="rounded-xl bg-amber-50/50 border border-amber-100 overflow-hidden">
+                                                        <div className="flex items-center gap-3 px-3.5 py-3 bg-white border-b border-amber-100">
+                                                            <div className={`w-10 h-10 rounded-full font-bold flex items-center justify-center flex-shrink-0 text-sm shadow-sm border ${personStyle.bg} ${personStyle.text} ${personStyle.border}`}>
+                                                                {person.charAt(0)}
+                                                            </div>
+                                                            <div className="flex flex-col min-w-0 flex-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className={`text-[14px] font-bold ${personStyle.text}`}>{person}</span>
+                                                                    <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">{sales.length}건</span>
+                                                                </div>
+                                                                <span className="text-[12px] font-semibold text-amber-600 mt-0.5">{formatCurrency(personTotal)}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col divide-y divide-amber-100">
+                                                            {sales.map((sale) => (
+                                                                <div key={`completed-${sale.id}`} className="flex items-center gap-2.5 px-3.5 py-2.5 hover:bg-amber-50/50 transition-colors">
+                                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                                        <span className="text-[13px] font-semibold text-gray-800 truncate leading-tight">{sale.clientName}</span>
+                                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                                            <span className={sale.contractType === '연장' ? 'text-blue-600 font-bold text-[11px]' : 'text-pink-600 font-bold text-[11px]'}>
+                                                                                {sale.contractType || '신규'}
+                                                                            </span>
+                                                                            <span className="text-[11px] text-gray-400">·</span>
+                                                                            <span className="text-[11px] font-medium text-gray-500">{formatCurrency(sale.totalAmount)}</span>
+                                                                            <span className="text-[11px] text-gray-400">·</span>
+                                                                            <span className="text-[10px] text-gray-400">{sale.contractDate}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })
+                                        })()}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
