@@ -30,7 +30,7 @@ const KAKAO_PF_ID = process.env.SOLAPI_KAKAO_PF_ID || ''
 const KAKAO_NEW_SALE_TEMPLATE = process.env.SOLAPI_KAKAO_NEW_SALE_TEMPLATE || ''
 const KAKAO_NEW_REPLY_TEMPLATE = process.env.SOLAPI_KAKAO_NEW_REPLY_TEMPLATE || ''
 // 카카오 알림톡 템플릿 심사 대기 중 문자가 중복 발송되는 것을 막기 위해 임시로 발송 기능을 강제 중단해 둡니다. (추후 Vercel 세팅 시 해제 예정)
-const DISABLE_ALERTS = true // process.env.SOLAPI_DISABLE_ALERTS === 'true'
+const DISABLE_ALERTS = false // 카카오 알림톡 템플릿 승인 완료 (2026-02-26)
 
 // 새 매출 등록 알림
 export async function notifyNewSale(data: {
