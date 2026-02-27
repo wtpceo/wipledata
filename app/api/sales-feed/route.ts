@@ -3,6 +3,19 @@ import { readFromSheet } from '@/lib/google-sheets'
 
 export const dynamic = 'force-dynamic'
 
+// Google Sheets 날짜 형식 정규화 (M/D/YYYY → YYYY-MM-DD)
+function normalizeDateStr(dateStr: string): string {
+    if (!dateStr) return ''
+    if (dateStr.includes('/')) {
+        const parts = dateStr.split('/')
+        if (parts.length === 3) {
+            const [m, d, y] = parts
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+        }
+    }
+    return dateStr
+}
+
 export async function GET(request: NextRequest) {
     try {
         const data = await readFromSheet('원본데이터!A2:AF')
@@ -31,7 +44,7 @@ export async function GET(request: NextRequest) {
                 const mediaInstallCount = row[28] || '' // AC: 설치대수
                 const mediaUnitPrice = row[29] || '' // AD: 대당단가
                 const depositorName = row[30] || '' // AE: 입금자명
-                const paymentCompletedDate = row[31] || '' // AF: 입금완료 댓글단 날짜
+                const paymentCompletedDate = normalizeDateStr(row[31] || '') // AF: 입금완료 댓글단 날짜
 
                 return {
                     id: `feed-${index}`,
