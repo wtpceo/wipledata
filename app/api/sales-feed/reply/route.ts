@@ -41,8 +41,18 @@ export async function POST(request: NextRequest) {
             // 입금예정인 경우에만 입금완료로 변경
             if (currentPaymentMethod === '입금예정') {
                 await updateSheet(paymentCellRange, [['입금완료']])
+
+                // AF열에 입금완료 날짜 기록 (YYYY-MM-DD)
+                const today = new Date()
+                const completedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+                await updateSheet(`원본데이터!AF${rowIndex}`, [[completedDate]])
+
+                // A열(timestamp) 갱신: 피드에서 입금완료 건이 오늘 날짜로 상단에 올라오도록
+                const newTimestamp = today.toISOString()
+                await updateSheet(`원본데이터!A${rowIndex}`, [[newTimestamp]])
+
                 paymentUpdated = true
-                console.log(`✅ 입금완료 처리: row ${rowIndex}, 결제방식 '입금예정' → '입금완료'`)
+                console.log(`✅ 입금완료 처리: row ${rowIndex}, 결제방식 '입금예정' → '입금완료', 날짜: ${completedDate}`)
             }
         }
 

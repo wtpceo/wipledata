@@ -139,26 +139,14 @@ export default function SalesFeedPage() {
             dateStr.replace(/\s/g, '').startsWith(`${year}.${todayDate.getMonth() + 1}.${todayDate.getDate()}`);
     }
 
-    const isThisMonth = (dateStr: string) => {
-        if (!dateStr) return false
-        const prefix = `${year}-${month}`
-        const dotPrefix1 = `${year}. ${todayDate.getMonth() + 1}.`
-        const dotPrefix2 = `${year}. ${month}.`
-        return dateStr.startsWith(prefix) ||
-            dateStr.startsWith(dotPrefix1) ||
-            dateStr.startsWith(dotPrefix2) ||
-            dateStr.replace(/\s/g, '').startsWith(`${year}.${month}.`) ||
-            dateStr.replace(/\s/g, '').startsWith(`${year}.${todayDate.getMonth() + 1}.`)
-    }
-
     const todaysSales = allData.filter(sale => isToday(sale.contractDate) || isToday(sale.timestamp))
 
-    // 이번 달 입금완료/입금확인 건 (오늘 등록 건 제외 → 중복 방지)
+    // 오늘 입금완료 처리된 건 (오늘 등록 건 제외 → 중복 방지)
     const thisMonthCompletedSales = allData.filter(sale => {
         const isCompletedPayment = sale.paymentMethod === '입금완료' || sale.paymentMethod === '입금확인'
-        const isNotToday = !isToday(sale.contractDate) && !isToday(sale.timestamp)
-        const isCurrentMonth = isThisMonth(sale.contractDate) || isThisMonth(sale.timestamp)
-        return isCompletedPayment && isNotToday && isCurrentMonth
+        const isNotTodayRegistered = !isToday(sale.contractDate) && !isToday(sale.timestamp)
+        const isCompletedToday = sale.paymentCompletedDate ? isToday(sale.paymentCompletedDate) : false
+        return isCompletedPayment && isNotTodayRegistered && isCompletedToday
     })
 
     const todaysTotalAmount =
@@ -217,10 +205,13 @@ export default function SalesFeedPage() {
                     <CardContent className="p-4 h-[calc(100vh-120px)] min-h-[900px] overflow-y-auto flex flex-col gap-2">
                         {data && data.length > 0 ? (
                             (() => {
-                                // 날짜별 그룹핑
+                                // 날짜별 그룹핑 (입금완료 건은 입금완료 날짜 기준으로 이동)
                                 const grouped: Record<string, any[]> = {}
                                 data.forEach(sale => {
-                                    const dateKey = sale.contractDate || sale.timestamp?.split('T')[0] || '날짜없음'
+                                    const isCompleted = (sale.paymentMethod === '입금완료' || sale.paymentMethod === '입금확인') && sale.paymentCompletedDate
+                                    const dateKey = isCompleted
+                                        ? sale.paymentCompletedDate
+                                        : (sale.contractDate || sale.timestamp?.split('T')[0] || '날짜없음')
                                     if (!grouped[dateKey]) grouped[dateKey] = []
                                     grouped[dateKey].push(sale)
                                 })
@@ -453,7 +444,7 @@ export default function SalesFeedPage() {
                             </span>
                             {thisMonthCompletedSales.length > 0 && (
                                 <span className="text-[11px] text-gray-400 mt-0.5">
-                                    오늘 등록 {todaysSales.length}건 + 이번 달 입금완료 {thisMonthCompletedSales.length}건
+                                    오늘 등록 {todaysSales.length}건 + 오늘 입금완료 {thisMonthCompletedSales.length}건
                                 </span>
                             )}
                         </div>
@@ -533,7 +524,7 @@ export default function SalesFeedPage() {
                                     <div className="border-t border-dashed border-amber-200 my-3" />
                                     <div className="text-[13px] font-bold text-amber-600 tracking-wider mb-3 px-1 flex items-center gap-1.5">
                                         <span className="inline-block w-2 h-2 rounded-full bg-amber-400" />
-                                        이번 달 입금완료 · {thisMonthCompletedSales.length}건
+                                        오늘 입금완료 · {thisMonthCompletedSales.length}건
                                     </div>
                                     <div className="flex flex-col gap-3 pb-2">
                                         {(() => {
