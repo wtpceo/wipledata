@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
                 const mediaInstallCount = row[28] || '' // AC: 설치대수
                 const mediaUnitPrice = row[29] || '' // AD: 대당단가
                 const depositorName = row[30] || '' // AE: 입금자명
-                const paymentCompletedDate = row[31] || '' // AF: 입금완료 날짜
+                const paymentCompletedDate = row[31] || '' // AF: 입금완료 댓글단 날짜
 
                 return {
                     id: `feed-${index}`,

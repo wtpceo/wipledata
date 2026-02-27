@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         netProfit: isPaymentPending ? 0 : (parseFloat(String(row[17] || '0').replace(/[^\d.-]/g, '')) || 0),
         inputYearMonth: row[18] || '',
         quarter: row[19] || '',
-        paymentCompletedDate: row[31] || '',  // AF열: 입금완료 날짜
+        paymentCompletedDate: row[31] || '',  // AF열: 입금완료 댓글단 날짜
       }
     })
 
@@ -54,11 +54,6 @@ export async function GET(request: NextRequest) {
 
     if (month) {
       filteredData = filteredData.filter(s => {
-        // 입금완료 건은 paymentCompletedDate 기준으로 월 판단
-        if ((s.paymentMethod === '입금완료' || s.paymentMethod === '입금확인') && s.paymentCompletedDate) {
-          return s.paymentCompletedDate.substring(0, 7) === month
-        }
-
         // 영업부는 S열(inputYearMonth) 사용
         if (s.department === '영업부') {
           return s.inputYearMonth === month

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
             if (currentPaymentMethod === '입금예정') {
                 await updateSheet(paymentCellRange, [['입금완료']])
 
-                // AF열에 입금완료 날짜 기록 (YYYY-MM-DD)
+                // AF열에 입금완료 댓글단 날짜 기록 (YYYY-MM-DD)
                 const today = new Date()
                 const completedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
                 await updateSheet(`원본데이터!AF${rowIndex}`, [[completedDate]])

@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
         const salesType = row[3] || '' // D열: 매출 유형
         const clientName = (row[4] || '').trim() // E열: 광고주명
         const paymentMethod = row[8] || '' // I열: 결제방식
-        const paymentCompletedDate = row[31] || '' // AF열: 입금완료 날짜
+        const paymentCompletedDate = row[31] || '' // AF열: 입금완료 댓글단 날짜
 
         // 입금예정인 경우 금액 0으로 처리 (입금완료 전까지 실적 미반영)
         const isPaymentPending = paymentMethod === '입금예정'
@@ -86,12 +86,8 @@ export async function GET(request: NextRequest) {
         // 날짜 파싱 (월별 그룹화를 위해)
         let saleMonth: string | null = null
 
-        // 입금완료 건은 paymentCompletedDate 기준으로 월 판단
-        if ((paymentMethod === '입금완료' || paymentMethod === '입금확인') && paymentCompletedDate) {
-          saleMonth = paymentCompletedDate.substring(0, 7)
-        }
         // 영업부는 S열(inputYearMonth) 사용
-        else if (department === '영업부') {
+        if (department === '영업부') {
           const inputMonth = row[18] || ''
           if (inputMonth) {
             if (inputMonth.includes('-')) {

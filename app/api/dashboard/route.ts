@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
         paymentMethod: paymentMethod,
         salesPerson: row[9] || '',
         inputMonth: monthValue,
-        paymentCompletedDate: row[31] || '',  // AF열: 입금완료 날짜
+        paymentCompletedDate: row[31] || '',  // AF열: 입금완료 댓글단 날짜
         rawRow: row
       }
     })
@@ -103,11 +103,6 @@ export async function GET(request: NextRequest) {
     // 현재 월 데이터 필터링
     // 영업부: S열(입력 월) 기준, 내무부: A열(타임스탬프) 기준
     const currentMonthSales = sales.filter(sale => {
-      // 입금완료 건은 paymentCompletedDate 기준으로 월 판단
-      if ((sale.paymentMethod === '입금완료' || sale.paymentMethod === '입금확인') && sale.paymentCompletedDate) {
-        return sale.paymentCompletedDate.substring(0, 7) === month
-      }
-
       // 영업부는 S열(입력 월) 사용
       if (sale.department === '영업부') {
         const inputMonth = sale.inputMonth
@@ -183,11 +178,6 @@ export async function GET(request: NextRequest) {
     // 이전 월 데이터 필터링
     // 영업부: S열(입력 월) 기준, 내무부: A열(타임스탬프) 기준
     const prevMonthSales = sales.filter(sale => {
-      // 입금완료 건은 paymentCompletedDate 기준으로 월 판단
-      if ((sale.paymentMethod === '입금완료' || sale.paymentMethod === '입금확인') && sale.paymentCompletedDate) {
-        return sale.paymentCompletedDate.substring(0, 7) === prevMonth
-      }
-
       // 영업부는 S열(입력 월) 사용
       if (sale.department === '영업부') {
         const inputMonth = sale.inputMonth
@@ -310,11 +300,6 @@ export async function GET(request: NextRequest) {
 
     const filterByMonth = (targetMonth: string, targetMonthNum: number) => {
       return sales.filter(sale => {
-        // 입금완료 건은 paymentCompletedDate 기준으로 월 판단
-        if ((sale.paymentMethod === '입금완료' || sale.paymentMethod === '입금확인') && sale.paymentCompletedDate) {
-          return sale.paymentCompletedDate.substring(0, 7) === targetMonth
-        }
-
         if (sale.department === '영업부') {
           const im = sale.inputMonth
           if (!im) return false
