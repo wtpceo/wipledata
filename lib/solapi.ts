@@ -67,6 +67,47 @@ export async function notifyNewSale(data: {
   await sendToAll(text, KAKAO_NEW_SALE_TEMPLATE, kakaoVariables)
 }
 
+// AE 실적 등록 알림 (기존 매출등록 템플릿 활용)
+export async function notifyNewPerformance(data: {
+  department: string
+  aeNames: string[]
+  clientName: string
+  performanceMonth: string
+  result: 'renewed' | 'failed'
+  renewalAmount: number
+  notes?: string
+  failureReason?: string
+}) {
+  const resultText = data.result === 'renewed' ? '연장성공' : '연장실패'
+  const specialNotes = data.result === 'failed'
+    ? data.failureReason || '없음'
+    : data.notes || '없음'
+
+  const text = [
+    '[위즈더플래닝] AE 실적 등록',
+    '',
+    `부서: ${data.department}`,
+    `담당자: ${data.aeNames.join(', ')}`,
+    `결과: ${resultText}`,
+    `광고주: ${data.clientName}`,
+    `실적월: ${data.performanceMonth}`,
+    `연장매출: ${formatAmount(data.renewalAmount)}`,
+    ...(specialNotes !== '없음' ? [`비고: ${specialNotes}`] : []),
+  ].join('\n')
+
+  const kakaoVariables = {
+    '#{department}': data.department || '-',
+    '#{inputPerson}': data.aeNames.join(', ') || '-',
+    '#{salesType}': resultText,
+    '#{clientName}': data.clientName || '-',
+    '#{productName}': data.performanceMonth || '-',
+    '#{totalAmount}': formatAmount(data.renewalAmount),
+    '#{specialNotes}': specialNotes,
+  }
+
+  await sendToAll(text, KAKAO_NEW_SALE_TEMPLATE, kakaoVariables)
+}
+
 // 댓글 알림
 export async function notifyNewReply(data: {
   authorName: string
