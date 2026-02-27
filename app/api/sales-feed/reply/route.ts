@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
         const currentNotes = data && data[0] && data[0][0] ? data[0][0] : ''
 
         // Prepare the formatted reply string
-        const now = new Date().toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
         const replyString = `\n\n[↪ ${authorName} 님의 덧글 - ${now}]\n${replyText}`
 
         // Append the reply
@@ -42,13 +42,12 @@ export async function POST(request: NextRequest) {
             if (currentPaymentMethod === '입금예정') {
                 await updateSheet(paymentCellRange, [['입금완료']])
 
-                // AF열에 입금완료 댓글단 날짜 기록 (YYYY-MM-DD)
-                const today = new Date()
-                const completedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+                // AF열에 입금완료 댓글단 날짜 기록 (YYYY-MM-DD, KST 기준)
+                const completedDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
                 await updateSheet(`원본데이터!AF${rowIndex}`, [[completedDate]])
 
                 // A열(timestamp) 갱신: 피드에서 입금완료 건이 오늘 날짜로 상단에 올라오도록
-                const newTimestamp = today.toISOString()
+                const newTimestamp = new Date().toISOString()
                 await updateSheet(`원본데이터!A${rowIndex}`, [[newTimestamp]])
 
                 paymentUpdated = true
