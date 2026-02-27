@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeToSheet, readFromSheet, SHEETS } from '@/lib/google-sheets'
+import { writeToSheet, readFromSheet, SHEETS, touchLastModified } from '@/lib/google-sheets'
 import { normalizeStaffName } from '@/lib/normalize-staff-name'
 import { notifyNewSale } from '@/lib/solapi'
 
@@ -239,6 +239,8 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error writing to sheets:', writeError)
       throw writeError
     }
+
+    await touchLastModified()
 
     // 알림 발송 (비동기, 실패해도 매출 등록은 성공)
     notifyNewSale({

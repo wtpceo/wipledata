@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readFromSheet, updateSheet } from '@/lib/google-sheets'
+import { readFromSheet, updateSheet, touchLastModified } from '@/lib/google-sheets'
 
 export async function POST(request: NextRequest) {
     try {
@@ -20,6 +20,8 @@ export async function POST(request: NextRequest) {
         const finalNotes = currentNotes.replace(replyString, '').trim()
 
         await updateSheet(cellRange, [[finalNotes]])
+
+        await touchLastModified()
 
         return NextResponse.json({ success: true })
     } catch (error) {

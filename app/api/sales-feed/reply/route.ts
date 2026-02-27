@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readFromSheet, updateSheet } from '@/lib/google-sheets'
+import { readFromSheet, updateSheet, touchLastModified } from '@/lib/google-sheets'
 import { notifyNewReply } from '@/lib/solapi'
 
 export async function POST(request: NextRequest) {
@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
         const clientData = await readFromSheet(`원본데이터!E${rowIndex}`)
         const clientName = clientData && clientData[0] && clientData[0][0] ? clientData[0][0] : ''
         notifyNewReply({ authorName, clientName, replyText })
+
+        await touchLastModified()
 
         return NextResponse.json({ success: true, paymentUpdated })
     } catch (error) {

@@ -12,7 +12,7 @@ const DashboardCharts = dynamic(
 import { useSheetData } from '@/hooks/useSheetData';
 
 export default function SheetsPage() {
-  const { data: salesData, loading, error } = useSheetData('sales', 60000);
+  const { data: salesData, loading, error } = useSheetData('sales');
 
   return (
     <div className="space-y-6">

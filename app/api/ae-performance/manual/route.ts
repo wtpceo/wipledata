@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeToSheet, readFromSheet } from '@/lib/google-sheets'
+import { writeToSheet, readFromSheet, touchLastModified } from '@/lib/google-sheets'
 import { notifyNewPerformance } from '@/lib/solapi'
 
 export async function POST(request: NextRequest) {
@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
     await writeToSheet('AEPerformance!A:K', performanceData)
 
     console.log('✅ Manual AE Performance data saved successfully')
+
+    await touchLastModified()
 
     // 알림 발송 (비동기, 실패해도 실적 등록은 성공)
     const firstAeDepartment = staffMap.get(aeNames[0]) || '미지정'

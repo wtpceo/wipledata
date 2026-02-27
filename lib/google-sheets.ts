@@ -155,6 +155,15 @@ export async function deleteFromSheet(sheetName: string, rowIndex: number) {
   }
 }
 
+// 마지막 수정 시간 기록 (클라이언트 경량 폴링용)
+export async function touchLastModified() {
+  try {
+    await updateSheet('Settings!Z1', [[new Date().toISOString()]])
+  } catch (error) {
+    console.error('Failed to touch last modified:', error)
+  }
+}
+
 // Sheet 이름 상수
 export const SHEETS = {
   SALES: 'Sales',

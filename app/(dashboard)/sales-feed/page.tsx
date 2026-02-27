@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, MessageSquare, Send, Package } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { useSmartRefresh } from "@/hooks/useSmartRefresh"
 
 const INTERNAL_TEAM = ['이수빈', '최호천', '조아라', '정우진', '양주미', '김민우', '박한']
 const SALES_TEAM = ['박현수', '박은수']
@@ -35,14 +36,22 @@ export default function SalesFeedPage() {
         }
     }, [session?.user?.name])
 
-    useEffect(() => {
-        fetchSalesFeed()
-        // 1분(60초)마다 데이터 자동 갱신
-        const interval = setInterval(() => {
-            fetchSalesFeed()
-        }, 60000)
-        return () => clearInterval(interval)
+    const fetchSalesFeed = useCallback(async () => {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/sales-feed')
+            if (response.ok) {
+                const json = await response.json()
+                setAllData(json.data || [])
+            }
+        } catch (error) {
+            console.error('Failed to fetch sales feed data:', error)
+        } finally {
+            setLoading(false)
+        }
     }, [])
+
+    useSmartRefresh(fetchSalesFeed)
 
     useEffect(() => {
         if (!searchQuery.trim()) {
@@ -61,21 +70,6 @@ export default function SalesFeedPage() {
         )
         setData(filtered)
     }, [searchQuery, allData])
-
-    const fetchSalesFeed = async () => {
-        try {
-            setLoading(true)
-            const response = await fetch('/api/sales-feed')
-            if (response.ok) {
-                const json = await response.json()
-                setAllData(json.data || [])
-            }
-        } catch (error) {
-            console.error('Failed to fetch sales feed data:', error)
-        } finally {
-            setLoading(false)
-        }
-    }
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('ko-KR', {
@@ -195,7 +189,7 @@ export default function SalesFeedPage() {
                                 전체 실시간 매출 피드 (2026년~)
                             </CardTitle>
                             <CardDescription>
-                                1분 주기로 자동 업데이트 됩니다. {data.length} 건 검색됨.
+                                데이터 변경 시 자동 업데이트 됩니다. {data.length} 건 검색됨.
                             </CardDescription>
                         </div>
                         <Button variant="outline" size="sm" onClick={fetchSalesFeed} disabled={loading}>

@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 export default function SheetsDashboard() {
-  const { data, loading, error, lastUpdated, refresh } = useSheetData('sales', 60000); // 1분마다 자동 새로고침
+  const { data, loading, error, lastUpdated, refresh } = useSheetData('sales');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useSmartRefresh } from './useSmartRefresh';
 
-export function useSheetData(type = 'sales', refreshInterval = 60000) {
+export function useSheetData(type = 'sales') {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,28 +36,13 @@ export function useSheetData(type = 'sales', refreshInterval = 60000) {
     }
   }, [type]);
 
-  // 초기 데이터 로드
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // 자동 새로고침 설정
-  useEffect(() => {
-    if (refreshInterval && refreshInterval > 0) {
-      const interval = setInterval(fetchData, refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [fetchData, refreshInterval]);
-
-  const refresh = useCallback(() => {
-    fetchData();
-  }, [fetchData]);
+  useSmartRefresh(fetchData);
 
   return {
     data,
     loading,
     error,
     lastUpdated,
-    refresh
+    refresh: fetchData
   };
 }

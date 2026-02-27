@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, TrendingUp, Users, Package, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useSmartRefresh } from "@/hooks/useSmartRefresh"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, LabelList, Cell
@@ -67,15 +68,6 @@ export default function DashboardPage() {
   const [inputPersonWeek, setInputPersonWeek] = useState<number>(0) // 0 = 월별
   const [departmentWeek, setDepartmentWeek] = useState<number>(0) // 0 = 월별
 
-  useEffect(() => {
-    fetchDashboardData(selectedMonth)
-    // 1분(60초)마다 데이터 자동 갱신하여 게시판에 반영
-    const interval = setInterval(() => {
-      fetchDashboardData(selectedMonth)
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [selectedMonth])
-
   const fetchDashboardData = async (month: string) => {
     try {
       setLoading(true)
@@ -90,6 +82,14 @@ export default function DashboardPage() {
       setLoading(false)
     }
   }
+
+  // 월 변경 시 즉시 데이터 로드
+  useEffect(() => {
+    fetchDashboardData(selectedMonth)
+  }, [selectedMonth])
+
+  // 데이터 변경 감지 시 자동 갱신
+  useSmartRefresh(useCallback(() => fetchDashboardData(selectedMonth), [selectedMonth]))
 
   const changeMonth = (direction: 'prev' | 'next') => {
     const date = new Date(selectedMonth + '-01')
