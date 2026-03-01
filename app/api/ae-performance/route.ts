@@ -21,26 +21,41 @@ function parseDate(dateStr: string): Date | null {
   if (!dateStr) return null
 
   try {
+    let cleaned = dateStr.trim()
+
+    // 물결표(~) 접두사 제거: "~2025.03.15" → "2025.03.15"
+    cleaned = cleaned.replace(/^~/, '')
+
+    // 범위 형식에서 종료일(뒤쪽) 추출: "2025.03.15~2025.09.15" → "2025.09.15"
+    if (cleaned.includes('~')) {
+      cleaned = cleaned.split('~').pop()!.trim()
+    }
+
     // ISO 형식
-    if (dateStr.includes('T')) {
-      return new Date(dateStr)
+    if (cleaned.includes('T')) {
+      const d = new Date(cleaned)
+      return isNaN(d.getTime()) ? null : d
     }
     // YYYY.MM.DD 형식
-    if (/^\d{4}\.\d{1,2}\.\d{1,2}$/.test(dateStr)) {
-      const [year, month, day] = dateStr.split('.')
+    if (/^\d{4}\.\d{1,2}\.\d{1,2}$/.test(cleaned)) {
+      const [year, month, day] = cleaned.split('.')
+      return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+    }
+    // YYYY-MM-DD 형식 (명시적 처리)
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleaned)) {
+      const [year, month, day] = cleaned.split('-')
       return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
     }
     // MM/DD/YYYY 형식
-    if (dateStr.includes('/')) {
-      const parts = dateStr.split('/')
+    if (cleaned.includes('/')) {
+      const parts = cleaned.split('/')
       if (parts.length === 3) {
-        // MM/DD/YYYY 가정 (한국식일 수도 있으나 기존 코드 존중)
-        // MM/DD/YYYY 순서로 파싱
         return new Date(`${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`)
       }
     }
-    // YYYY-MM-DD 형식
-    return new Date(dateStr)
+    // 폴백
+    const fallback = new Date(cleaned)
+    return isNaN(fallback.getTime()) ? null : fallback
   } catch {
     return null
   }
@@ -213,9 +228,11 @@ export async function GET(request: NextRequest) {
 
         // (C) 연장 실패 건 추가
         // 종료일이 해당 월인 경우에만 연장 실패로 집계
+        // + 분모(aeTargetClientsMap)에도 추가하여 누락 방지
         const aeFailedMap = new Map<string, number>()
         clientsRows.forEach(row => {
           if (row[0] === '연장 실패') {
+            const clientName = (row[1] || '').trim()
             const endDateStr = row[4] || ''
             const aeString = row[5] || ''
             const endDate = parseDate(endDateStr)
@@ -226,6 +243,12 @@ export async function GET(request: NextRequest) {
                 const normalizedAE = normalizeStaffName(aeName)
                 if (!aeFailedMap.has(normalizedAE)) aeFailedMap.set(normalizedAE, 0)
                 aeFailedMap.set(normalizedAE, aeFailedMap.get(normalizedAE)! + 1)
+
+                // 분모에도 명시적 추가 (Section A 파싱 실패 시 보완)
+                if (clientName) {
+                  if (!aeTargetClientsMap.has(normalizedAE)) aeTargetClientsMap.set(normalizedAE, new Set())
+                  aeTargetClientsMap.get(normalizedAE)!.add(clientName)
+                }
               })
             }
           }
