@@ -153,7 +153,7 @@ async function sendToAll(text: string, templateId?: string, variables?: Record<s
             pfId: KAKAO_PF_ID,
             templateId: templateId,
             variables: variables || {},
-            disableSms: true, // 실패 시 문자로 대체 발송 (개발/테스트 단계에선 켜두는게 좋음)
+            disableSms: false, // 알림톡 실패 시 SMS로 대체 발송
           },
         }
       }
@@ -167,10 +167,13 @@ async function sendToAll(text: string, templateId?: string, variables?: Record<s
     })
 
     const result = await messageService.send(messages)
-    console.log('✅ 알림 발송 완료:', result)
+    console.log('✅ 알림 발송 완료:', JSON.stringify(result, null, 2))
     return result
-  } catch (error) {
-    console.error('❌ 알림 발송 실패:', error)
+  } catch (error: any) {
+    console.error('❌ 알림 발송 실패:', error?.message || error)
+    if (error?.response) {
+      console.error('❌ SOLAPI 응답 상세:', JSON.stringify(error.response, null, 2))
+    }
     // 알림 실패가 본 기능을 막지 않도록 에러를 던지지 않음
   }
 }
