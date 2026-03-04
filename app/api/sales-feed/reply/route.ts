@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFromSheet, updateSheet, touchLastModified } from '@/lib/google-sheets'
-import { notifyNewReply } from '@/lib/solapi'
+import { notifyNewReply, notifyNewSale } from '@/lib/solapi'
 
 export async function POST(request: NextRequest) {
     try {
@@ -55,10 +55,28 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 댓글 알림 발송 (비동기, 실패해도 댓글 등록은 성공)
+        // 입금완료 처리 시 전용 알림 발송 (매출등록 템플릿 재활용)
+        if (paymentUpdated) {
+            const saleDataRange = `원본데이터!B${rowIndex}:H${rowIndex}`
+            const saleData = await readFromSheet(saleDataRange)
+            if (saleData && saleData[0]) {
+                const row = saleData[0]
+                await notifyNewSale({
+                    department: row[0] || '-',      // B: 부서
+                    inputPerson: row[1] || '-',     // C: 입력자
+                    clientName: row[3] || '-',      // E: 광고주명
+                    productName: row[4] || '-',     // F: 상품명
+                    totalAmount: parseInt(row[6]) || 0, // H: 총금액
+                    salesType: '입금완료',
+                    specialNotes: `${authorName} 님이 입금완료 처리`,
+                })
+            }
+        }
+
+        // 댓글 알림 발송 (실패해도 댓글 등록은 성공)
         const clientData = await readFromSheet(`원본데이터!E${rowIndex}`)
         const clientName = clientData && clientData[0] && clientData[0][0] ? clientData[0][0] : ''
-        notifyNewReply({ authorName, clientName, replyText })
+        await notifyNewReply({ authorName, clientName, replyText })
 
         await touchLastModified()
 

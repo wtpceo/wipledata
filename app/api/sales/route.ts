@@ -242,15 +242,22 @@ export async function POST(request: NextRequest) {
 
     await touchLastModified()
 
-    // 알림 발송 (비동기, 실패해도 매출 등록은 성공)
-    notifyNewSale({
+    // 알림 발송 (실패해도 매출 등록은 성공)
+    // 입금예정인 경우 특이사항에 입금예정 정보 포함
+    let notificationNotes = specialNotes || ''
+    if (finalPaymentMethod === '입금예정') {
+      const depositInfo = `💰 입금예정${depositorName ? ` (입금자: ${depositorName})` : ''}`
+      notificationNotes = notificationNotes ? `${depositInfo} / ${notificationNotes}` : depositInfo
+    }
+
+    await notifyNewSale({
       inputPerson,
       department,
       clientName,
       productName: finalProductName,
       totalAmount,
       salesType,
-      specialNotes,
+      specialNotes: notificationNotes,
     })
 
     return NextResponse.json({
