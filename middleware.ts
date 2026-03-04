@@ -5,7 +5,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 인증이 필요없는 경로
-  const publicPaths = ['/login', '/register', '/api/auth']
+  const publicPaths = ['/login', '/register', '/api/auth', '/api/notifications']
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
 
   if (isPublicPath) {
