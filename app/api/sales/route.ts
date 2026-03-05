@@ -250,15 +250,20 @@ export async function POST(request: NextRequest) {
       notificationNotes = notificationNotes ? `${depositInfo} / ${notificationNotes}` : depositInfo
     }
 
-    await notifyNewSale({
-      inputPerson,
-      department,
-      clientName,
-      productName: finalProductName,
-      totalAmount,
-      salesType,
-      specialNotes: notificationNotes,
-    })
+    try {
+      await notifyNewSale({
+        inputPerson,
+        department,
+        clientName,
+        productName: finalProductName,
+        totalAmount,
+        salesType,
+        specialNotes: notificationNotes,
+      })
+      console.log('✅ 매출 등록 알림 발송 성공:', clientName)
+    } catch (notifyError) {
+      console.error('❌ 매출 등록 알림 발송 실패 (매출 등록은 성공):', notifyError)
+    }
 
     return NextResponse.json({
       success: true,
