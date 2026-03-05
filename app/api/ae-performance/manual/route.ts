@@ -81,23 +81,31 @@ export async function POST(request: NextRequest) {
 
     await touchLastModified()
 
-    // 알림 발송 (비동기, 실패해도 실적 등록은 성공)
-    const firstAeDepartment = staffMap.get(aeNames[0]) || '미지정'
-    notifyNewPerformance({
-      department: firstAeDepartment,
-      aeNames,
-      clientName,
-      performanceMonth,
-      result,
-      renewalAmount: result === 'renewed' ? renewalAmount : 0,
-      notes,
-      failureReason: result === 'failed' ? failureReason : '',
-    })
+    // 알림 발송 (실패해도 실적 등록은 성공)
+    let notificationSent = false
+    try {
+      const firstAeDepartment = staffMap.get(aeNames[0]) || '미지정'
+      await notifyNewPerformance({
+        department: firstAeDepartment,
+        aeNames,
+        clientName,
+        performanceMonth,
+        result,
+        renewalAmount: result === 'renewed' ? renewalAmount : 0,
+        notes,
+        failureReason: result === 'failed' ? failureReason : '',
+      })
+      notificationSent = true
+      console.log('✅ AE 실적 알림 발송 성공')
+    } catch (notifyError) {
+      console.error('❌ AE 실적 알림 발송 실패 (실적 등록은 성공):', notifyError)
+    }
 
     return NextResponse.json({
       success: true,
       message: '수동 실적이 등록되었습니다.',
-      count: performanceData.length
+      count: performanceData.length,
+      notificationSent,
     })
   } catch (error) {
     console.error('❌ Error saving manual AE performance:', error)
