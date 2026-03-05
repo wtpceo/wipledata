@@ -1,12 +1,16 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, MessageSquare, Send, Package } from "lucide-react"
 import { useSession } from "next-auth/react"
-import { useSmartRefresh } from "@/hooks/useSmartRefresh"
+import { useSmartRefresh, notifyDataChanged } from "@/hooks/useSmartRefresh"
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, Legend
+} from "recharts"
 
 const INTERNAL_TEAM = ['이수빈', '최호천', '조아라', '정우진', '양주미', '김민우', '박한']
 const SALES_TEAM = ['박현수', '박은수']
@@ -39,7 +43,7 @@ export default function SalesFeedPage() {
     const fetchSalesFeed = useCallback(async () => {
         try {
             setLoading(true)
-            const response = await fetch('/api/sales-feed')
+            const response = await fetch('/api/sales-feed', { cache: 'no-store' })
             if (response.ok) {
                 const json = await response.json()
                 setAllData(json.data || [])
@@ -103,6 +107,7 @@ export default function SalesFeedPage() {
             if (response.ok) {
                 setReplyText('')
                 setActiveReplyId(null)
+                notifyDataChanged()
                 await fetchSalesFeed() // 덧글 작성 후 바로 새로고침
             } else {
                 alert('답장 등록에 실패했습니다.')
@@ -152,6 +157,67 @@ export default function SalesFeedPage() {
 
     const totalDisplayCount = todaysSales.length + thisMonthCompletedSales.length
 
+    // 현재 월 일별 매출 추이 데이터
+    const dailySalesData = useMemo(() => {
+        if (!allData || allData.length === 0) return []
+
+        const now = new Date()
+        const currentYear = now.getFullYear()
+        const currentMonth = now.getMonth() // 0-indexed
+
+        // 해당 월의 일수
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+
+        // 일별 집계 초기화
+        const dailyMap: Record<number, { salesDept: number; internalDept: number }> = {}
+        for (let d = 1; d <= daysInMonth; d++) {
+            dailyMap[d] = { salesDept: 0, internalDept: 0 }
+        }
+
+        const isSalesDept = (name: string, dept: string) => {
+            return SALES_TEAM.includes(name) || dept === '영업부'
+        }
+
+        allData.forEach(sale => {
+            if (sale.paymentMethod === '입금예정') return
+
+            // 날짜 추출: contractDate 또는 timestamp
+            const dateStr = sale.contractDate || sale.timestamp?.split('T')[0] || ''
+            if (!dateStr) return
+
+            // YYYY-MM-DD 형태로 파싱
+            const normalized = dateStr.replace(/\s/g, '').replace(/\./g, '-').replace(/-$/, '')
+            const parts = normalized.split('-')
+            if (parts.length < 3) return
+
+            const saleYear = parseInt(parts[0])
+            const saleMonth = parseInt(parts[1]) - 1 // 0-indexed
+            const saleDay = parseInt(parts[2])
+
+            if (saleYear !== currentYear || saleMonth !== currentMonth) return
+            if (saleDay < 1 || saleDay > daysInMonth) return
+
+            const amount = sale.totalAmount || 0
+            if (isSalesDept(sale.inputPerson, sale.department)) {
+                dailyMap[saleDay].salesDept += amount
+            } else {
+                dailyMap[saleDay].internalDept += amount
+            }
+        })
+
+        return Array.from({ length: daysInMonth }, (_, i) => {
+            const d = i + 1
+            return {
+                day: `${d}`,
+                salesDept: dailyMap[d].salesDept,
+                internalDept: dailyMap[d].internalDept,
+                total: dailyMap[d].salesDept + dailyMap[d].internalDept,
+            }
+        })
+    }, [allData])
+
+    const currentMonthLabel = `${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월`
+
     return (
         <div className="space-y-6 max-w-[1400px] mx-auto pb-10 flex flex-col xl:flex-row gap-6">
 
@@ -176,6 +242,78 @@ export default function SalesFeedPage() {
                         className="pl-9 h-11 border-gray-300 max-w-xl bg-white focus-visible:ring-1"
                     />
                 </div>
+
+                {/* 일별 매출 추이 그래프 */}
+                {dailySalesData.length > 0 && dailySalesData.some(d => d.total > 0) && (
+                    <Card className="mb-4">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">{currentMonthLabel} 일별 매출 추이</CardTitle>
+                            <CardDescription>영업부 / 내무부 부서별 일 매출 현황</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pb-3">
+                            <ResponsiveContainer width="100%" height={200}>
+                                <BarChart data={dailySalesData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis
+                                        dataKey="day"
+                                        tick={{ fontSize: 11 }}
+                                        interval={0}
+                                        height={24}
+                                    />
+                                    <YAxis
+                                        tickFormatter={(v: number) => v >= 10000 ? `${Math.round(v / 10000)}만` : v > 0 ? `${Math.round(v / 1000)}천` : ''}
+                                        tick={{ fontSize: 10 }}
+                                        width={45}
+                                    />
+                                    <Tooltip
+                                        content={({ active, payload, label }) => {
+                                            if (!active || !payload || payload.length === 0) return null
+                                            const entry = dailySalesData.find(d => d.day === label)
+                                            const total = entry?.total ?? 0
+                                            if (total === 0) return null
+                                            return (
+                                                <div className="rounded-lg border bg-background p-3 shadow-md text-sm min-w-[160px]">
+                                                    <p className="font-semibold mb-2">{label}일</p>
+                                                    {payload.map((p: any) => {
+                                                        if (!p.value) return null
+                                                        const pct = total > 0 ? Math.round((p.value / total) * 100) : 0
+                                                        return (
+                                                            <div key={p.dataKey} className="flex justify-between gap-4">
+                                                                <span style={{ color: p.fill }}>{p.name}</span>
+                                                                <span className="font-medium">
+                                                                    {formatCurrency(p.value)}
+                                                                    <span className="text-muted-foreground ml-1">({pct}%)</span>
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                    <div className="flex justify-between gap-4 border-t mt-1 pt-1 font-semibold">
+                                                        <span>합계</span>
+                                                        <span>{formatCurrency(total)}</span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        }}
+                                    />
+                                    <Legend content={() => (
+                                        <div className="flex justify-center gap-6 text-sm mt-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+                                                <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>영업부</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                                                <span style={{ color: '#22c55e', fontWeight: 'bold' }}>내무부</span>
+                                            </div>
+                                        </div>
+                                    )} />
+                                    <Bar dataKey="salesDept" name="영업부" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} maxBarSize={20} />
+                                    <Bar dataKey="internalDept" name="내무부" stackId="a" fill="#22c55e" radius={[2, 2, 0, 0]} maxBarSize={20} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* 실시간 매출 게시판 (Naver Band Style) */}
                 <Card className="bg-[#ebedf0] shadow-inner border-0">
@@ -306,6 +444,7 @@ export default function SalesFeedPage() {
                                                                                     body: JSON.stringify({ rowIndex, replyString })
                                                                                 });
                                                                                 if (response.ok) {
+                                                                                    notifyDataChanged();
                                                                                     await fetchSalesFeed();
                                                                                 } else {
                                                                                     alert('삭제에 실패했습니다.');
