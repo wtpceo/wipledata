@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { readFromSheet, updateSheet, touchLastModified } from '@/lib/google-sheets'
 import { notifyNewReply } from '@/lib/solapi'
 
@@ -55,11 +55,18 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 댓글 알림 발송 (실패해도 댓글 등록은 성공)
-        // 입금완료 처리 시에도 댓글 알림(notifyNewReply)으로만 발송
+        // 댓글 알림: after()로 응답 반환 후 백그라운드 실행 (Vercel 함수 타임아웃 방지)
         const clientData = await readFromSheet(`원본데이터!E${rowIndex}`)
         const clientName = clientData && clientData[0] && clientData[0][0] ? clientData[0][0] : ''
-        await notifyNewReply({ authorName, clientName, replyText })
+
+        after(async () => {
+            try {
+                await notifyNewReply({ authorName, clientName, replyText })
+                console.log('✅ 댓글 알림 발송 성공:', clientName)
+            } catch (e) {
+                console.error('❌ 댓글 알림 발송 실패:', e)
+            }
+        })
 
         await touchLastModified()
 

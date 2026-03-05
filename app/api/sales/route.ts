@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { writeToSheet, readFromSheet, SHEETS, touchLastModified } from '@/lib/google-sheets'
 import { normalizeStaffName } from '@/lib/normalize-staff-name'
 import { notifyNewSale } from '@/lib/solapi'
@@ -242,28 +242,29 @@ export async function POST(request: NextRequest) {
 
     await touchLastModified()
 
-    // 알림 발송 (실패해도 매출 등록은 성공)
-    // 입금예정인 경우 특이사항에 입금예정 정보 포함
+    // 알림 발송: after()로 응답 반환 후 백그라운드 실행 (Vercel 함수 타임아웃 방지)
     let notificationNotes = specialNotes || ''
     if (finalPaymentMethod === '입금예정') {
       const depositInfo = `💰 입금예정${depositorName ? ` (입금자: ${depositorName})` : ''}`
       notificationNotes = notificationNotes ? `${depositInfo} / ${notificationNotes}` : depositInfo
     }
 
-    try {
-      await notifyNewSale({
-        inputPerson,
-        department,
-        clientName,
-        productName: finalProductName,
-        totalAmount,
-        salesType,
-        specialNotes: notificationNotes,
-      })
-      console.log('✅ 매출 등록 알림 발송 성공:', clientName)
-    } catch (notifyError) {
-      console.error('❌ 매출 등록 알림 발송 실패 (매출 등록은 성공):', notifyError)
-    }
+    after(async () => {
+      try {
+        await notifyNewSale({
+          inputPerson,
+          department,
+          clientName,
+          productName: finalProductName,
+          totalAmount,
+          salesType,
+          specialNotes: notificationNotes,
+        })
+        console.log('✅ 매출 등록 알림 발송 성공:', clientName)
+      } catch (notifyError) {
+        console.error('❌ 매출 등록 알림 발송 실패:', notifyError)
+      }
+    })
 
     return NextResponse.json({
       success: true,
