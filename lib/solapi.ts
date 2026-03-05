@@ -153,7 +153,7 @@ async function sendToAll(text: string, templateId?: string, variables?: Record<s
             pfId: KAKAO_PF_ID,
             templateId: templateId,
             variables: variables || {},
-            disableSms: false, // 알림톡 실패 시 SMS로 대체 발송
+            disableSms: true, // 알림톡으로만 발송 (SMS 대체 발송 비활성화)
           },
         }
       }
