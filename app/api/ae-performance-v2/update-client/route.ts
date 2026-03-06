@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
 import { getGoogleAuth, readFromSheet, writeToSheet } from '@/lib/google-sheets'
 import { normalizeStaffName } from '@/lib/normalize-staff-name'
+import { notifyNewSale } from '@/lib/solapi'
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!
 
@@ -158,6 +159,24 @@ async function handleRenewalSuccess(
 
   // 원본데이터 탭에 저장
   await writeToSheet('원본데이터!A:AE', [rawDataRow])
+
+  // 알림 발송 (실패해도 매출 등록은 성공)
+  try {
+    await notifyNewSale({
+      inputPerson: normalizedAeName,
+      department,
+      clientName,
+      productName: finalProductName,
+      totalAmount: renewalAmount,
+      salesType: '연장',
+      specialNotes: finalPaymentMethod === '입금예정'
+        ? `💰 입금예정${depositorName ? ` (입금자: ${depositorName})` : ''}`
+        : (approvalNumber ? `${finalPaymentMethod} (승인번호: ${approvalNumber})` : ''),
+    })
+    console.log('✅ AE 연장 매출 알림 발송 성공:', clientName)
+  } catch (notifyError) {
+    console.error('❌ AE 연장 매출 알림 발송 실패:', notifyError)
+  }
 
   return { success: true, newEndDate: formatDate(newEndDate) }
 }
