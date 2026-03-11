@@ -155,6 +155,54 @@ export async function deleteFromSheet(sheetName: string, rowIndex: number) {
   }
 }
 
+// 시트 ID 조회 (batchUpdate용)
+export async function getSheetId(sheetName: string): Promise<number> {
+  const sheets = await getGoogleSheetsClient()
+  const spreadsheet = await sheets.spreadsheets.get({
+    spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
+  })
+  const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName)
+  if (!sheet?.properties?.sheetId) {
+    throw new Error(`Sheet "${sheetName}" not found`)
+  }
+  return sheet.properties.sheetId
+}
+
+// 같은 계약 묶음에 테두리 포맷팅 적용 (매체별 행 분리 시각화)
+// startRow, endRow: 1-indexed (Google Sheets 행 번호)
+export async function applyBorderFormat(sheetName: string, startRow: number, endRow: number) {
+  try {
+    const sheets = await getGoogleSheetsClient()
+    const sheetId = await getSheetId(sheetName)
+
+    const thickBorder = { style: 'SOLID_MEDIUM', colorStyle: { rgbColor: { red: 0.2, green: 0.4, blue: 0.8 } } }
+    const noBorder = { style: 'NONE' }
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
+      requestBody: {
+        requests: [{
+          updateBorders: {
+            range: {
+              sheetId,
+              startRowIndex: startRow - 1, // 0-indexed
+              endRowIndex: endRow,          // 0-indexed exclusive
+              startColumnIndex: 0,
+              endColumnIndex: 31,           // A~AE (31개 컬럼)
+            },
+            top: thickBorder,
+            bottom: thickBorder,
+            innerHorizontal: noBorder,
+          }
+        }]
+      }
+    })
+  } catch (error) {
+    console.error('Error applying border format:', error)
+    // 포맷팅 실패는 데이터 저장에 영향 없도록 에러를 throw하지 않음
+  }
+}
+
 // 마지막 수정 시간 기록 (클라이언트 경량 폴링용)
 export async function touchLastModified() {
   try {

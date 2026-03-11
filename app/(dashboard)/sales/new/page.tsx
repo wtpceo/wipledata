@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -75,6 +75,9 @@ export default function NewSalePage() {
     onlineCheckHour: '',
   })
 
+  // 매체별 금액
+  const [mediaAmounts, setMediaAmounts] = useState<Record<string, string>>({})
+
   // 미디어 계약 정보 (다중 입력)
   const [mediaContracts, setMediaContracts] = useState([{ complexName: '', installCount: '', unitPrice: '', monthlyPrice: '' }])
 
@@ -89,6 +92,18 @@ export default function NewSalePage() {
   const updateMediaContract = (index: number, field: string, value: string) => {
     setMediaContracts(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item))
   }
+
+  // 매체별 금액 합계 (총 계약금액 자동 계산)
+  const mediaSubtotal = Object.values(mediaAmounts)
+    .reduce((sum, v) => sum + (parseInt(v.replace(/,/g, '')) || 0), 0)
+
+  // mediaSubtotal이 변경되면 totalAmount 자동 반영
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      totalAmount: mediaSubtotal > 0 ? new Intl.NumberFormat('ko-KR').format(mediaSubtotal) : ''
+    }))
+  }, [mediaSubtotal])
 
   // 포커스미디어만 주 단위 계약
   const hasWeeklyMedia = formData.productNames.includes('포커스미디어')
@@ -105,7 +120,7 @@ export default function NewSalePage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
 
-    if (name === 'totalAmount' || name === 'outsourcingCost') {
+    if (name === 'outsourcingCost') {
       setFormData({
         ...formData,
         [name]: formatCurrency(value),
@@ -125,6 +140,12 @@ export default function NewSalePage() {
         ? [...prev.productNames, productValue]
         : prev.productNames.filter(p => p !== productValue)
       return { ...prev, productNames: newProductNames }
+    })
+    setMediaAmounts(prev => {
+      if (checked) return { ...prev, [productValue]: '' }
+      const next = { ...prev }
+      delete next[productValue]
+      return next
     })
   }
 
@@ -156,6 +177,11 @@ export default function NewSalePage() {
       return
     }
 
+    if (mediaSubtotal === 0) {
+      alert('매체별 계약금액을 입력해주세요.')
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -172,13 +198,16 @@ export default function NewSalePage() {
         credentials: 'include',
         body: JSON.stringify({
           ...formData,
-          productName: formData.productNames.join(', '), // 배열을 문자열로 변환
-          totalAmount: parseInt(formData.totalAmount.replace(/,/g, '')),
+          totalAmount: mediaSubtotal,
           outsourcingCost: parseInt(formData.outsourcingCost.replace(/,/g, '') || '0'),
           contractMonths: hasMonthlyMedia ? parseInt(formData.contractMonths) : 0,
           contractWeeks: hasWeeklyMedia ? parseInt(formData.contractWeeks) : 0,
           onlineCheckDateTime,
-          // 미디어 계약 정보: 여러 단지를 줄바꿈으로 직렬화 (셀 내 줄바꿈)
+          // 매체별 금액 (각 매체명: 금액)
+          mediaAmounts: Object.fromEntries(
+            Object.entries(mediaAmounts).map(([k, v]) => [k, parseInt(v.replace(/,/g, '')) || 0])
+          ),
+          // 미디어 계약 정보 (옥외매체): 여러 단지를 줄바꿈으로 직렬화
           mediaComplexName: mediaContracts.map(m => m.complexName).filter(Boolean).join('\n'),
           mediaInstallCount: mediaContracts.map(m => m.installCount).filter(Boolean).join('\n'),
           mediaUnitPrice: mediaContracts.map(m => m.unitPrice ? parseInt(m.unitPrice.replace(/,/g, '')) : 0).filter(v => v > 0).join('\n'),
@@ -565,65 +594,84 @@ export default function NewSalePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="totalAmount">총 계약금액</Label>
+            {/* 결제 방식 */}
+            <div className="space-y-2">
+              <Label htmlFor="paymentMethod">결제 방식</Label>
+              <select
+                id="paymentMethod"
+                name="paymentMethod"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={formData.paymentMethod}
+                onChange={handleInputChange}
+                required
+              >
+                <option value="">결제 방식을 선택하세요</option>
+                <option value="카드 결제">카드 결제</option>
+                <option value="계좌 이체">계좌 이체</option>
+                <option value="현금 수령">현금 수령</option>
+                <option value="입금예정">입금예정</option>
+                <option value="미결제">미결제</option>
+                <option value="기타">기타</option>
+              </select>
+              {formData.paymentMethod === '기타' && (
                 <Input
-                  id="totalAmount"
-                  name="totalAmount"
+                  name="paymentMethodOther"
                   type="text"
-                  value={formData.totalAmount}
+                  value={formData.paymentMethodOther}
                   onChange={handleInputChange}
-                  placeholder="0"
-                  required
+                  placeholder="기타 결제 방식 입력"
+                  className="mt-2"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="paymentMethod">결제 방식</Label>
-                <select
-                  id="paymentMethod"
-                  name="paymentMethod"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={formData.paymentMethod}
-                  onChange={handleInputChange}
-                  required
-                >
-                  <option value="">결제 방식을 선택하세요</option>
-                  <option value="카드 결제">카드 결제</option>
-                  <option value="계좌 이체">계좌 이체</option>
-                  <option value="현금 수령">현금 수령</option>
-                  <option value="입금예정">입금예정</option>
-                  <option value="미결제">미결제</option>
-                  <option value="기타">기타</option>
-                </select>
-                {formData.paymentMethod === '기타' && (
+              )}
+              {formData.paymentMethod === '입금예정' && (
+                <div className="mt-2">
+                  <Label htmlFor="depositorName">입금자명</Label>
                   <Input
-                    name="paymentMethodOther"
+                    id="depositorName"
+                    name="depositorName"
                     type="text"
-                    value={formData.paymentMethodOther}
+                    value={formData.depositorName}
                     onChange={handleInputChange}
-                    placeholder="기타 결제 방식 입력"
-                    className="mt-2"
+                    placeholder="입금자명을 입력하세요"
+                    className="mt-1"
                   />
-                )}
-                {formData.paymentMethod === '입금예정' && (
-                  <div className="mt-2">
-                    <Label htmlFor="depositorName">입금자명</Label>
-                    <Input
-                      id="depositorName"
-                      name="depositorName"
-                      type="text"
-                      value={formData.depositorName}
-                      onChange={handleInputChange}
-                      placeholder="입금자명을 입력하세요"
-                      className="mt-1"
-                    />
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
+            {/* 매체별 계약금액 */}
+            {formData.productNames.length > 0 && (
+              <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
+                <Label className="text-sm font-semibold">매체별 계약금액</Label>
+                {formData.productNames.map(product => (
+                  <div key={product} className="flex items-center gap-3">
+                    <span className="w-36 text-sm font-medium shrink-0">
+                      {product === '기타' && formData.productOther ? formData.productOther : product}
+                    </span>
+                    <Input
+                      type="text"
+                      value={mediaAmounts[product] || ''}
+                      onChange={(e) => {
+                        const formatted = formatCurrency(e.target.value)
+                        setMediaAmounts(prev => ({ ...prev, [product]: formatted }))
+                      }}
+                      placeholder="0"
+                      className="w-48"
+                      required
+                    />
+                    <span className="text-sm text-muted-foreground">원</span>
+                  </div>
+                ))}
+                <div className="border-t pt-3 flex justify-between items-center">
+                  <span className="text-sm font-semibold">총 계약금액 (합계)</span>
+                  <span className="text-lg font-bold">
+                    {new Intl.NumberFormat('ko-KR').format(mediaSubtotal)}원
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 결제 승인번호 + 외주비 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="approvalNumber">결제 승인 번호</Label>

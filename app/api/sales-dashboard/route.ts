@@ -6,8 +6,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const month = searchParams.get('month')
 
-    // Google Sheets의 원본데이터 탭에서 데이터 읽기
-    const data = await readFromSheet('원본데이터!A:Z')
+    // Google Sheets의 원본데이터 탭에서 데이터 읽기 (AH열까지: contractId)
+    const data = await readFromSheet('원본데이터!A:AH')
 
     if (!data || data.length === 0) {
       return NextResponse.json({
@@ -75,18 +75,24 @@ export async function GET(request: NextRequest) {
       })))
     }
 
+    // contractId 컬럼 인덱스 (AH열 = 인덱스 33)
+    const CONTRACT_ID_INDEX = 33
+
     // 영업 담당자별로 데이터 집계
+    // contractId 기반으로 계약 건수 dedup (매체별 행 분리 구조 대응)
     const salesPeopleMap: { [key: string]: {
       salesPerson: string
       totalSales: number
       clients: Set<string>
       monthlyData: { [key: string]: number }
       salesByType: { [key: string]: { count: number, amount: number } }
+      seenContractIds: Set<string>
     }} = {}
 
     salesDeptData.forEach(row => {
       const salesPerson = row[inputPersonIndex]?.trim()
       const salesType = row[salesTypeIndex]?.trim() || '기타'
+      const contractId = row[CONTRACT_ID_INDEX]?.trim() || ''
 
       // 총계약금액과 외주비 파싱
       const contractAmountStr = row[amountIndex]?.toString().replace(/[^0-9.-]/g, '') || '0'
@@ -144,7 +150,8 @@ export async function GET(request: NextRequest) {
           totalSales: 0,
           clients: new Set(),
           monthlyData: {},
-          salesByType: {}
+          salesByType: {},
+          seenContractIds: new Set(),
         }
       }
 
@@ -157,11 +164,20 @@ export async function GET(request: NextRequest) {
           (salesPeopleMap[salesPerson].monthlyData[monthKey] || 0) + amount
       }
 
-      // 매출 유형별 집계
+      // 매출 유형별 집계: contractId가 있으면 dedup으로 건수 카운트
+      const isNewContract = contractId
+        ? !salesPeopleMap[salesPerson].seenContractIds.has(contractId)
+        : true
+      if (contractId) {
+        salesPeopleMap[salesPerson].seenContractIds.add(contractId)
+      }
+
       if (!salesPeopleMap[salesPerson].salesByType[salesType]) {
         salesPeopleMap[salesPerson].salesByType[salesType] = { count: 0, amount: 0 }
       }
-      salesPeopleMap[salesPerson].salesByType[salesType].count += 1
+      if (isNewContract) {
+        salesPeopleMap[salesPerson].salesByType[salesType].count += 1
+      }
       salesPeopleMap[salesPerson].salesByType[salesType].amount += amount
     })
 
