@@ -36,6 +36,7 @@ interface ExpiringClient {
   duplicateWith: string[]
   status: 'pending' | 'renewed' | 'failed' | 'waiting'
   renewalMonths: number
+  renewalWeeks?: number
   renewalAmount: number
   failureReason: string
   daysOverdue?: number
@@ -111,6 +112,7 @@ export default function AEPerformanceV2Page() {
   const [dialogAction, setDialogAction] = useState<'renewed' | 'failed' | 'pending'>('renewed')
   const [selectedClient, setSelectedClient] = useState<ExpiringClient | null>(null)
   const [renewalMonths, setRenewalMonths] = useState(0)
+  const [renewalWeeks, setRenewalWeeks] = useState(0)
   const [renewalAmount, setRenewalAmount] = useState(0)
   const [failureReason, setFailureReason] = useState('')
 
@@ -199,6 +201,7 @@ export default function AEPerformanceV2Page() {
     setSelectedClient(client)
     setDialogAction(action)
     setRenewalMonths(0)
+    setRenewalWeeks(0)
     setRenewalAmount(0)
     setFailureReason('')
     // 연장 성공 시 추가 필드 초기화
@@ -254,7 +257,8 @@ export default function AEPerformanceV2Page() {
         body: JSON.stringify({
           rowIndex: selectedClient.rowIndex,
           action: dialogAction,
-          renewalMonths: dialogAction === 'renewed' ? renewalMonths : undefined,
+          renewalMonths: dialogAction === 'renewed' ? (productName === '포커스미디어' ? 0 : renewalMonths) : undefined,
+          renewalWeeks: dialogAction === 'renewed' && productName === '포커스미디어' ? renewalWeeks : undefined,
           renewalAmount: dialogAction === 'renewed' ? renewalAmount : undefined,
           failureReason: dialogAction === 'failed' ? failureReason : undefined,
           currentEndDate: selectedClient.endDate,
@@ -288,7 +292,8 @@ export default function AEPerformanceV2Page() {
                 ? {
                   ...client,
                   status: dialogAction,
-                  renewalMonths: dialogAction === 'renewed' ? renewalMonths : 0,
+                  renewalMonths: dialogAction === 'renewed' ? (productName === '포커스미디어' ? 0 : renewalMonths) : 0,
+                  renewalWeeks: dialogAction === 'renewed' && productName === '포커스미디어' ? renewalWeeks : 0,
                   renewalAmount: dialogAction === 'renewed' ? renewalAmount : 0,
                   failureReason: '',
                   endDate: dialogAction === 'renewed' && data.newEndDate ? data.newEndDate : client.endDate
@@ -846,7 +851,7 @@ export default function AEPerformanceV2Page() {
                                   {client.status === 'renewed' && (
                                     <>
                                       <p className="text-green-600 font-medium">
-                                        ✓ 연장 성공 ({client.renewalMonths}개월, {formatCurrency(client.renewalAmount)})
+                                        ✓ 연장 성공 ({client.renewalWeeks ? `${client.renewalWeeks}주` : `${client.renewalMonths}개월`}, {formatCurrency(client.renewalAmount)})
                                       </p>
                                     </>
                                   )}
@@ -931,14 +936,24 @@ export default function AEPerformanceV2Page() {
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>연장 개월 수 *</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={renewalMonths || ''}
-                      onChange={(e) => setRenewalMonths(parseInt(e.target.value) || 0)}
-                      placeholder="개월"
-                    />
+                    <Label>{productName === '포커스미디어' ? '계약 주 수' : '계약 개월 수'} *</Label>
+                    {productName === '포커스미디어' ? (
+                      <Input
+                        type="number"
+                        min="1"
+                        value={renewalWeeks || ''}
+                        onChange={(e) => setRenewalWeeks(parseInt(e.target.value) || 0)}
+                        placeholder="주"
+                      />
+                    ) : (
+                      <Input
+                        type="number"
+                        min="1"
+                        value={renewalMonths || ''}
+                        onChange={(e) => setRenewalMonths(parseInt(e.target.value) || 0)}
+                        placeholder="개월"
+                      />
+                    )}
                   </div>
                   <div>
                     <Label>총 계약금액 *</Label>
@@ -961,12 +976,24 @@ export default function AEPerformanceV2Page() {
                       <SelectValue placeholder="상품을 선택하세요" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="배달앱 관리">배달앱 관리</SelectItem>
-                      <SelectItem value="토탈 관리">토탈 관리</SelectItem>
-                      <SelectItem value="퍼포먼스 마케팅">퍼포먼스 마케팅</SelectItem>
-                      <SelectItem value="유튜브 마케팅">유튜브 마케팅</SelectItem>
-                      <SelectItem value="브랜드 블로그 마케팅">브랜드 블로그 마케팅</SelectItem>
-                      <SelectItem value="댓글만">댓글만</SelectItem>
+                      <SelectItem value="배민">배민</SelectItem>
+                      <SelectItem value="댓글">댓글</SelectItem>
+                      <SelectItem value="플레이스">플레이스</SelectItem>
+                      <SelectItem value="블로그">블로그</SelectItem>
+                      <SelectItem value="퍼포먼스">퍼포먼스</SelectItem>
+                      <SelectItem value="유튜브">유튜브</SelectItem>
+                      <SelectItem value="블로그기자단">블로그기자단</SelectItem>
+                      <SelectItem value="블로그체험단">블로그체험단</SelectItem>
+                      <SelectItem value="포커스미디어">포커스미디어</SelectItem>
+                      <SelectItem value="타운보드S">타운보드S</SelectItem>
+                      <SelectItem value="GS">GS</SelectItem>
+                      <SelectItem value="타운보드L">타운보드L</SelectItem>
+                      <SelectItem value="GS 전자게시대">GS 전자게시대</SelectItem>
+                      <SelectItem value="HTPOST">HTPOST</SelectItem>
+                      <SelectItem value="HTPOST 전단지">HTPOST 전단지</SelectItem>
+                      <SelectItem value="타겟핏">타겟핏</SelectItem>
+                      <SelectItem value="홈페이지 제작">홈페이지 제작</SelectItem>
+                      <SelectItem value="아파트너">아파트너</SelectItem>
                       <SelectItem value="기타">기타</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1037,7 +1064,7 @@ export default function AEPerformanceV2Page() {
                 </div>
 
                 <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded">
-                  <p>• 종료일이 자동으로 {renewalMonths}개월 연장됩니다.</p>
+                  <p>• 종료일이 자동으로 {productName === '포커스미디어' ? `${renewalWeeks}주` : `${renewalMonths}개월`} 연장됩니다.</p>
                   <p>• 현재 종료일: {selectedClient?.endDate}</p>
                   <p>• 원본데이터에 새로운 매출 데이터가 추가됩니다.</p>
                 </div>
@@ -1109,7 +1136,7 @@ export default function AEPerformanceV2Page() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">계약기간:</span>{' '}
-                        <span className="font-bold">{detail.renewalMonths}개월</span>
+                        <span className="font-bold">{detail.renewalWeeks ? `${detail.renewalWeeks}주` : `${detail.renewalMonths}개월`}</span>
                       </div>
                       <div className="col-span-2">
                         <span className="text-muted-foreground">마케팅 상품명:</span>{' '}

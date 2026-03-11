@@ -127,12 +127,11 @@ export async function POST(request: NextRequest) {
     // 최종 결제 방식 결정 (기타 선택 시 paymentMethodOther 값 사용)
     const finalPaymentMethod = paymentMethod === '기타' ? paymentMethodOther : paymentMethod
 
-    // 옥외매체 여부 확인
-    const OUTDOOR_MEDIA_LIST = ['포커스미디어', '타운보드S', 'GS', '타운보드L', 'GS 전자게시대', 'HTPOST', 'HTPOST 전단지']
-    const isOutdoorMedia = productName && OUTDOOR_MEDIA_LIST.some(m => productName.includes(m))
+    // 포커스미디어만 주 단위, 나머지는 개월 단위
+    const isFocusMedia = productName && productName.includes('포커스미디어')
 
     // 계약 기간 표시 (개월 또는 주)
-    const contractPeriod = isOutdoorMedia && contractWeeks
+    const contractPeriod = isFocusMedia && contractWeeks
       ? `${contractWeeks}주`
       : contractMonths ? `${contractMonths}개월` : ''
 
@@ -141,7 +140,7 @@ export async function POST(request: NextRequest) {
     const monthlyAmount = Math.round(totalAmount / effectiveMonths)
     const netProfit = totalAmount - (outsourcingCost || 0)
     const contractEndDate = new Date(contractDate)
-    if (isOutdoorMedia && contractWeeks) {
+    if (isFocusMedia && contractWeeks) {
       contractEndDate.setDate(contractEndDate.getDate() + (contractWeeks * 7))
     } else {
       contractEndDate.setMonth(contractEndDate.getMonth() + (contractMonths || 0))

@@ -48,6 +48,7 @@ async function handleRenewalSuccess(
   rowIndex: number,
   currentEndDate: string,
   renewalMonths: number,
+  renewalWeeks: number,
   renewalAmount: number,
   clientName: string,
   aeString: string,
@@ -68,9 +69,19 @@ async function handleRenewalSuccess(
     throw new Error('Invalid end date format')
   }
 
-  // 새로운 종료일 계산 (기존 종료일 + 연장 개월수)
+  // 포커스미디어만 주 단위, 나머지는 개월 단위
+  const finalProductName_temp = productName === '기타' ? productOther : productName
+  const isFocusMedia = finalProductName_temp && finalProductName_temp.includes('포커스미디어')
+
+  // 새로운 종료일 계산
   const newEndDate = new Date(endDate)
-  newEndDate.setMonth(newEndDate.getMonth() + renewalMonths)
+  if (isFocusMedia && renewalWeeks) {
+    newEndDate.setDate(newEndDate.getDate() + (renewalWeeks * 7))
+  } else {
+    newEndDate.setMonth(newEndDate.getMonth() + renewalMonths)
+  }
+  const contractPeriodStr = isFocusMedia && renewalWeeks ? `${renewalWeeks}주` : `${renewalMonths}개월`
+  const effectiveMonths = renewalMonths || (renewalWeeks ? Math.ceil(renewalWeeks / 4) : 1)
 
   // Clients 탭의 E열(종료일) 업데이트
   await sheets.spreadsheets.values.update({
@@ -93,7 +104,7 @@ async function handleRenewalSuccess(
   const finalPaymentMethod = paymentMethod === '기타' ? paymentMethodOther : paymentMethod
 
   // 월 평균 금액 계산
-  const monthlyAmount = Math.round(renewalAmount / renewalMonths)
+  const monthlyAmount = Math.round(renewalAmount / effectiveMonths)
   // 순수익 계산
   const netProfit = renewalAmount - (outsourcingCost || 0)
   // 입력 년월
@@ -130,12 +141,12 @@ async function handleRenewalSuccess(
     '연장', // D: 매출 유형
     clientName, // E: 광고주 업체명
     finalProductName, // F: 마케팅 매체 상품명
-    renewalMonths.toString(), // G: 계약 개월 수
+    contractPeriodStr, // G: 계약 기간 (주 또는 개월)
     renewalAmount.toString(), // H: 총 계약금액
     finalPaymentMethod, // I: 결제 방식
     approvalNumber || '', // J: 결제 승인 번호
     outsourcingCost ? outsourcingCost.toString() : '0', // K: 확정 외주비
-    `연장 계약 - ${renewalMonths}개월`, // L: 광고주 상담 내용
+    `연장 계약 - ${contractPeriodStr}`, // L: 광고주 상담 내용
     '', // M: 특이사항
     '', // N: 계약서 파일 및 기타 자료
     contractDate, // O: 계약날짜 (원래 종료일)
@@ -154,11 +165,12 @@ async function handleRenewalSuccess(
     '', // AB: 단지명
     '', // AC: 설치대수
     '', // AD: 대당단가
-    finalPaymentMethod === '입금예정' ? (depositorName || '') : '', // AE: 입금자명
+    '', // AE: 월단가
+    finalPaymentMethod === '입금예정' ? (depositorName || '') : '', // AF: 입금자명
   ]
 
   // 원본데이터 탭에 저장
-  await writeToSheet('원본데이터!A:AE', [rawDataRow])
+  await writeToSheet('원본데이터!A:AF', [rawDataRow])
 
   // 알림 발송 (실패해도 매출 등록은 성공)
   try {
@@ -224,6 +236,7 @@ export async function POST(request: NextRequest) {
       rowIndex,
       action,
       renewalMonths,
+      renewalWeeks,
       renewalAmount,
       failureReason,
       currentEndDate,
@@ -259,9 +272,10 @@ export async function POST(request: NextRequest) {
 
     if (action === 'renewed') {
       // 연장 성공 처리
-      if (!renewalMonths || renewalMonths < 1) {
+      const isFocusRenewal = productName && productName.includes('포커스미디어')
+      if (isFocusRenewal ? (!renewalWeeks || renewalWeeks < 1) : (!renewalMonths || renewalMonths < 1)) {
         return NextResponse.json(
-          { error: 'Renewal months must be at least 1' },
+          { error: 'Renewal period must be at least 1' },
           { status: 400 }
         )
       }
@@ -290,7 +304,8 @@ export async function POST(request: NextRequest) {
       result = await handleRenewalSuccess(
         rowIndex,
         currentEndDate,
-        renewalMonths,
+        renewalMonths || 0,
+        renewalWeeks || 0,
         renewalAmount || 0,
         clientName,
         aeString,

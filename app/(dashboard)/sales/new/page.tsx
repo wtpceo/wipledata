@@ -90,10 +90,12 @@ export default function NewSalePage() {
     setMediaContracts(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item))
   }
 
-  // 옥외매체가 선택되었는지 확인
+  // 포커스미디어만 주 단위 계약
+  const hasWeeklyMedia = formData.productNames.includes('포커스미디어')
+  // 포커스미디어 외 모든 매체는 개월 단위 (옥외매체 포함)
+  const hasMonthlyMedia = formData.productNames.some(p => p !== '포커스미디어' && p !== '기타')
+  // 옥외매체 선택 여부 (미디어 계약정보 및 온라인 점검 표시용)
   const hasOutdoorMedia = formData.productNames.some(p => OUTDOOR_MEDIA.includes(p))
-  // 일반 매체가 선택되었는지 확인 (개월 수 필요)
-  const hasRegularMedia = formData.productNames.some(p => !OUTDOOR_MEDIA.includes(p) && p !== '기타')
 
   const formatCurrency = (value: string) => {
     const number = value.replace(/[^0-9]/g, '')
@@ -167,8 +169,8 @@ export default function NewSalePage() {
           productName: formData.productNames.join(', '), // 배열을 문자열로 변환
           totalAmount: parseInt(formData.totalAmount.replace(/,/g, '')),
           outsourcingCost: parseInt(formData.outsourcingCost.replace(/,/g, '') || '0'),
-          contractMonths: hasRegularMedia ? parseInt(formData.contractMonths) : 0,
-          contractWeeks: hasOutdoorMedia ? parseInt(formData.contractWeeks) : 0,
+          contractMonths: hasMonthlyMedia ? parseInt(formData.contractMonths) : 0,
+          contractWeeks: hasWeeklyMedia ? parseInt(formData.contractWeeks) : 0,
           onlineCheckDateTime,
           // 미디어 계약 정보: 여러 단지를 줄바꿈으로 직렬화 (셀 내 줄바꿈)
           mediaComplexName: mediaContracts.map(m => m.complexName).filter(Boolean).join('\n'),
@@ -361,8 +363,8 @@ export default function NewSalePage() {
 
             {/* 계약 기간 입력 */}
             <div className="grid grid-cols-2 gap-4">
-              {/* 일반 매체용 개월 수 */}
-              {hasRegularMedia && (
+              {/* 포커스미디어 외 모든 매체 - 개월 수 */}
+              {hasMonthlyMedia && (
                 <div className="space-y-2">
                   <Label htmlFor="contractMonths">계약 개월 수</Label>
                   <Input
@@ -373,16 +375,16 @@ export default function NewSalePage() {
                     value={formData.contractMonths}
                     onChange={handleInputChange}
                     placeholder="숫자만 입력 (예: 6)"
-                    required={hasRegularMedia}
+                    required={hasMonthlyMedia}
                   />
-                  <p className="text-xs text-muted-foreground">일반 매체 계약 기간</p>
+                  <p className="text-xs text-muted-foreground">계약 기간 (개월)</p>
                 </div>
               )}
 
-              {/* 옥외매체용 주 단위 */}
-              {hasOutdoorMedia && (
+              {/* 포커스미디어 전용 - 주 단위 */}
+              {hasWeeklyMedia && (
                 <div className="space-y-2">
-                  <Label htmlFor="contractWeeks">계약 주 수 (옥외매체)</Label>
+                  <Label htmlFor="contractWeeks">계약 주 수 (포커스미디어)</Label>
                   <Input
                     id="contractWeeks"
                     name="contractWeeks"
@@ -391,9 +393,9 @@ export default function NewSalePage() {
                     value={formData.contractWeeks}
                     onChange={handleInputChange}
                     placeholder="숫자만 입력 (예: 12, 24)"
-                    required={hasOutdoorMedia}
+                    required={hasWeeklyMedia}
                   />
-                  <p className="text-xs text-muted-foreground">옥외매체 계약 기간</p>
+                  <p className="text-xs text-muted-foreground">포커스미디어 계약 기간</p>
                 </div>
               )}
             </div>
