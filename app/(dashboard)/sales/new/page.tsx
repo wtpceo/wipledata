@@ -7,22 +7,33 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { notifyDataChanged } from '@/hooks/useSmartRefresh'
 import { Checkbox } from '@/components/ui/checkbox'
 
 // 옥외매체 목록 (주 단위 계약)
-const OUTDOOR_MEDIA = ['포커스미디어', '타운보드']
+const OUTDOOR_MEDIA = ['포커스미디어', '타운보드S', 'GS', '타운보드L', 'GS 전자게시대', 'HTPOST', 'HTPOST 전단지']
 
 // 마케팅 매체 상품 목록
 const PRODUCT_OPTIONS = [
-  { value: '배달앱 관리', label: '배달앱 관리' },
-  { value: '토탈 관리', label: '토탈 관리' },
-  { value: '퍼포먼스 마케팅', label: '퍼포먼스 마케팅' },
-  { value: '유튜브 마케팅', label: '유튜브 마케팅' },
-  { value: '브랜드 블로그 마케팅', label: '브랜드 블로그 마케팅' },
-  { value: '댓글만', label: '댓글만' },
-  { value: '포커스미디어', label: '포커스미디어 (옥외매체)' },
-  { value: '타운보드', label: '타운보드 (옥외매체)' },
-  { value: '기타', label: '기타' },
+  { value: '배민',          label: '배민' },
+  { value: '댓글',          label: '댓글' },
+  { value: '플레이스',      label: '플레이스' },
+  { value: '블로그',        label: '블로그' },
+  { value: '퍼포먼스',      label: '퍼포먼스' },
+  { value: '유튜브',        label: '유튜브' },
+  { value: '블로그기자단',  label: '블로그기자단' },
+  { value: '블로그체험단',  label: '블로그체험단' },
+  { value: '포커스미디어',  label: '포커스미디어' },
+  { value: '타운보드S',     label: '타운보드S' },
+  { value: 'GS',            label: 'GS' },
+  { value: '타운보드L',     label: '타운보드L' },
+  { value: 'GS 전자게시대', label: 'GS 전자게시대' },
+  { value: 'HTPOST',        label: 'HTPOST' },
+  { value: 'HTPOST 전단지', label: 'HTPOST 전단지' },
+  { value: '타겟핏',        label: '타겟핏' },
+  { value: '홈페이지 제작', label: '홈페이지 제작' },
+  { value: '아파트너',      label: '아파트너' },
+  { value: '기타',          label: '기타' },
 ]
 
 export default function NewSalePage() {
@@ -65,10 +76,10 @@ export default function NewSalePage() {
   })
 
   // 미디어 계약 정보 (다중 입력)
-  const [mediaContracts, setMediaContracts] = useState([{ complexName: '', installCount: '', unitPrice: '' }])
+  const [mediaContracts, setMediaContracts] = useState([{ complexName: '', installCount: '', unitPrice: '', monthlyPrice: '' }])
 
   const addMediaContract = () => {
-    setMediaContracts(prev => [...prev, { complexName: '', installCount: '', unitPrice: '' }])
+    setMediaContracts(prev => [...prev, { complexName: '', installCount: '', unitPrice: '', monthlyPrice: '' }])
   }
 
   const removeMediaContract = (index: number) => {
@@ -163,6 +174,7 @@ export default function NewSalePage() {
           mediaComplexName: mediaContracts.map(m => m.complexName).filter(Boolean).join('\n'),
           mediaInstallCount: mediaContracts.map(m => m.installCount).filter(Boolean).join('\n'),
           mediaUnitPrice: mediaContracts.map(m => m.unitPrice ? parseInt(m.unitPrice.replace(/,/g, '')) : 0).filter(v => v > 0).join('\n'),
+          mediaMonthlyPrice: mediaContracts.map(m => m.monthlyPrice ? parseInt(m.monthlyPrice.replace(/,/g, '')) : 0).filter(v => v > 0).join('\n'),
         }),
       })
 
@@ -170,6 +182,7 @@ export default function NewSalePage() {
         throw new Error('매출 등록 실패')
       }
 
+      notifyDataChanged()
       alert('매출이 성공적으로 등록되었습니다.')
       router.push('/sales')
     } catch (error) {
@@ -380,7 +393,7 @@ export default function NewSalePage() {
                     placeholder="숫자만 입력 (예: 12, 24)"
                     required={hasOutdoorMedia}
                   />
-                  <p className="text-xs text-muted-foreground">포커스미디어/타운보드 계약 기간</p>
+                  <p className="text-xs text-muted-foreground">옥외매체 계약 기간</p>
                 </div>
               )}
             </div>
@@ -458,7 +471,7 @@ export default function NewSalePage() {
                     🏢 미디어 계약 정보 (옥외매체)
                   </CardTitle>
                   <CardDescription>
-                    포커스미디어/타운보드 계약 시 단지 정보를 입력해주세요.
+                    옥외매체 계약 시 단지 정보를 입력해주세요. (단지명, 설치대수는 필수)
                   </CardDescription>
                 </div>
                 <Button
@@ -474,24 +487,26 @@ export default function NewSalePage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {mediaContracts.map((contract, index) => (
-                <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
+                <div key={index} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
                   <div className="space-y-1">
-                    {index === 0 && <Label className="text-xs">단지명</Label>}
+                    {index === 0 && <Label className="text-xs">단지명 *</Label>}
                     <Input
                       type="text"
                       value={contract.complexName}
                       onChange={(e) => updateMediaContract(index, 'complexName', e.target.value)}
                       placeholder="예: OO아파트"
+                      required={hasOutdoorMedia && index === 0}
                     />
                   </div>
                   <div className="space-y-1">
-                    {index === 0 && <Label className="text-xs">설치대수</Label>}
+                    {index === 0 && <Label className="text-xs">설치대수 *</Label>}
                     <Input
                       type="number"
                       min="1"
                       value={contract.installCount}
                       onChange={(e) => updateMediaContract(index, 'installCount', e.target.value)}
                       placeholder="예: 10"
+                      required={hasOutdoorMedia && index === 0}
                     />
                   </div>
                   <div className="space-y-1">
@@ -500,6 +515,15 @@ export default function NewSalePage() {
                       type="text"
                       value={contract.unitPrice}
                       onChange={(e) => updateMediaContract(index, 'unitPrice', formatCurrency(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    {index === 0 && <Label className="text-xs">월단가</Label>}
+                    <Input
+                      type="text"
+                      value={contract.monthlyPrice}
+                      onChange={(e) => updateMediaContract(index, 'monthlyPrice', formatCurrency(e.target.value))}
                       placeholder="0"
                     />
                   </div>

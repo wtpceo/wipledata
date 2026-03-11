@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
       mediaComplexName,
       mediaInstallCount,
       mediaUnitPrice,
+      mediaMonthlyPrice,
 
       // 입금자명 (입금예정 선택 시)
       depositorName,
@@ -127,7 +128,8 @@ export async function POST(request: NextRequest) {
     const finalPaymentMethod = paymentMethod === '기타' ? paymentMethodOther : paymentMethod
 
     // 옥외매체 여부 확인
-    const isOutdoorMedia = productName && (productName.includes('포커스미디어') || productName.includes('타운보드'))
+    const OUTDOOR_MEDIA_LIST = ['포커스미디어', '타운보드S', 'GS', '타운보드L', 'GS 전자게시대', 'HTPOST', 'HTPOST 전단지']
+    const isOutdoorMedia = productName && OUTDOOR_MEDIA_LIST.some(m => productName.includes(m))
 
     // 계약 기간 표시 (개월 또는 주)
     const contractPeriod = isOutdoorMedia && contractWeeks
@@ -174,7 +176,8 @@ export async function POST(request: NextRequest) {
       mediaComplexName || '', // V: 단지명
       mediaInstallCount ? `'${mediaInstallCount.toString()}` : '', // W: 설치대수 (아포스트로피로 텍스트 강제)
       mediaUnitPrice ? `'${mediaUnitPrice.toString()}` : '', // X: 대당단가 (아포스트로피로 텍스트 강제)
-      depositorName || '', // Y: 입금자명
+      mediaMonthlyPrice ? `'${mediaMonthlyPrice.toString()}` : '', // Y: 월단가 (아포스트로피로 텍스트 강제)
+      depositorName || '', // Z: 입금자명
       contractEndDate.toISOString().split('T')[0], // Z: 계약종료일
       monthlyAmount.toString(), // AA: 월평균금액
       netProfit.toString(), // AB: 순수익
@@ -218,7 +221,8 @@ export async function POST(request: NextRequest) {
       mediaComplexName || '', // AB: 단지명
       mediaInstallCount ? `'${mediaInstallCount.toString()}` : '', // AC: 설치대수 (아포스트로피로 텍스트 강제)
       mediaUnitPrice ? `'${mediaUnitPrice.toString()}` : '', // AD: 대당단가 (아포스트로피로 텍스트 강제)
-      depositorName || '', // AE: 입금자명
+      mediaMonthlyPrice ? `'${mediaMonthlyPrice.toString()}` : '', // AE: 월단가 (아포스트로피로 텍스트 강제)
+      depositorName || '', // AF: 입금자명
     ]
 
     // Sales 시트와 원본데이터 탭에 동시에 쓰기
@@ -229,7 +233,7 @@ export async function POST(request: NextRequest) {
 
       const results = await Promise.all([
         writeToSheet(`${SHEETS.SALES}!A:AC`, [salesRow]),
-        writeToSheet('원본데이터!A:AE', [rawDataRow])
+        writeToSheet('원본데이터!A:AF', [rawDataRow])
       ])
 
       console.log('✅ Successfully written to both sheets')

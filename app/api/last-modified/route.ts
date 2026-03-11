@@ -7,9 +7,13 @@ export async function GET() {
   try {
     const data = await readFromSheet('Settings!Z1')
     const modifiedTime = data?.[0]?.[0] || new Date(0).toISOString()
-    return NextResponse.json({ modifiedTime })
+    return NextResponse.json({ modifiedTime }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    })
   } catch (error) {
     console.error('Failed to read last modified:', error)
-    return NextResponse.json({ modifiedTime: new Date(0).toISOString() })
+    return NextResponse.json({ modifiedTime: new Date(0).toISOString() }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    })
   }
 }

@@ -18,7 +18,7 @@ function normalizeDateStr(dateStr: string): string {
 
 export async function GET(request: NextRequest) {
     try {
-        const data = await readFromSheet('원본데이터!A2:AF')
+        const data = await readFromSheet('원본데이터!A2:AG')
 
         const feedData = data
             .map((row, index) => {
@@ -39,12 +39,13 @@ export async function GET(request: NextRequest) {
                 const contractDate = timestamp ? timestamp.split('T')[0] : (row[14] || '')
                 const inputMonth = row[18] || ''
 
-                // 미디어 계약 정보 (AB/AC/AD 열)
+                // 미디어 계약 정보 (AB/AC/AD/AE 열)
                 const mediaComplexName = row[27] || '' // AB: 단지명
                 const mediaInstallCount = row[28] || '' // AC: 설치대수
                 const mediaUnitPrice = row[29] || '' // AD: 대당단가
-                const depositorName = row[30] || '' // AE: 입금자명
-                const paymentCompletedDate = normalizeDateStr(row[31] || '') // AF: 입금완료 댓글단 날짜
+                const mediaMonthlyPrice = row[30] || '' // AE: 월단가
+                const depositorName = row[31] || '' // AF: 입금자명
+                const paymentCompletedDate = normalizeDateStr(row[32] || '') // AG: 입금완료날짜
 
                 return {
                     id: `feed-${index}`,
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
                     mediaComplexName,
                     mediaInstallCount,
                     mediaUnitPrice,
+                    mediaMonthlyPrice,
                     depositorName,
                     paymentCompletedDate,
                 }
