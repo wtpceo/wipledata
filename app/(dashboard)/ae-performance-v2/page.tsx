@@ -47,6 +47,7 @@ interface RenewedClientDetail {
   salesType: string
   totalAmount: number
   renewalMonths: number
+  renewalWeeks?: number
   productName: string
   contractDate: string
   contractEndDate: string
