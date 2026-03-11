@@ -150,6 +150,12 @@ export default function NewSalePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (formData.productNames.length === 0) {
+      alert('마케팅 매체 상품을 1개 이상 선택해주세요.')
+      return
+    }
+
     setIsLoading(true)
 
     try {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { writeToSheet, readFromSheet, SHEETS, touchLastModified } from '@/lib/google-sheets'
 import { normalizeStaffName } from '@/lib/normalize-staff-name'
 import { notifyNewSale } from '@/lib/solapi'
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
       console.log('Raw data row:', rawDataRow)
 
       const results = await Promise.all([
-        writeToSheet(`${SHEETS.SALES}!A:AC`, [salesRow]),
+        writeToSheet(`${SHEETS.SALES}!A:AD`, [salesRow]),
         writeToSheet('원본데이터!A:AF', [rawDataRow])
       ])
 
@@ -252,28 +252,27 @@ export async function POST(request: NextRequest) {
       notificationNotes = notificationNotes ? `${depositInfo} / ${notificationNotes}` : depositInfo
     }
 
-    // 알림 발송 (응답 전 동기 실행으로 발송 누락 방지)
-    let notificationSent = false
-    try {
-      await notifyNewSale({
-        inputPerson,
-        department,
-        clientName,
-        productName: finalProductName,
-        totalAmount,
-        salesType,
-        specialNotes: notificationNotes,
-      })
-      notificationSent = true
-      console.log('✅ 매출 등록 알림 발송 성공:', clientName)
-    } catch (notifyError) {
-      console.error('❌ 매출 등록 알림 발송 실패:', notifyError)
-    }
+    // 알림 발송: after()로 응답 반환 후 백그라운드 실행 (Vercel 타임아웃 방지)
+    after(async () => {
+      try {
+        await notifyNewSale({
+          inputPerson,
+          department,
+          clientName,
+          productName: finalProductName,
+          totalAmount,
+          salesType,
+          specialNotes: notificationNotes,
+        })
+        console.log('✅ 매출 등록 알림 발송 성공:', clientName)
+      } catch (notifyError) {
+        console.error('❌ 매출 등록 알림 발송 실패:', notifyError)
+      }
+    })
 
     return NextResponse.json({
       success: true,
       message: '매출이 성공적으로 등록되었습니다.',
-      notificationSent,
     })
   } catch (error) {
     console.error('Error creating sale:', error)
