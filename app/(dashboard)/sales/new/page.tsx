@@ -13,6 +13,18 @@ import { Checkbox } from '@/components/ui/checkbox'
 // 옥외매체 목록 (주 단위 계약)
 const OUTDOOR_MEDIA = ['포커스미디어', '타운보드S', 'GS', '타운보드L', 'GS 전자게시대', 'HTPOST', 'HTPOST 전단지']
 
+// 매체별 색상 매핑
+const MEDIA_COLORS: Record<string, { border: string; bg: string; text: string; btnBorder: string; btnHover: string }> = {
+  '포커스미디어':   { border: 'border-blue-200',   bg: 'bg-blue-50/30',   text: 'text-blue-700',   btnBorder: 'border-blue-300',   btnHover: 'hover:bg-blue-100' },
+  '타운보드S':      { border: 'border-orange-200', bg: 'bg-orange-50/30', text: 'text-orange-700', btnBorder: 'border-orange-300', btnHover: 'hover:bg-orange-100' },
+  'GS':             { border: 'border-green-200',  bg: 'bg-green-50/30',  text: 'text-green-700',  btnBorder: 'border-green-300',  btnHover: 'hover:bg-green-100' },
+  '타운보드L':      { border: 'border-purple-200', bg: 'bg-purple-50/30', text: 'text-purple-700', btnBorder: 'border-purple-300', btnHover: 'hover:bg-purple-100' },
+  'GS 전자게시대':  { border: 'border-teal-200',   bg: 'bg-teal-50/30',   text: 'text-teal-700',   btnBorder: 'border-teal-300',   btnHover: 'hover:bg-teal-100' },
+  'HTPOST':         { border: 'border-pink-200',   bg: 'bg-pink-50/30',   text: 'text-pink-700',   btnBorder: 'border-pink-300',   btnHover: 'hover:bg-pink-100' },
+  'HTPOST 전단지':  { border: 'border-rose-200',   bg: 'bg-rose-50/30',   text: 'text-rose-700',   btnBorder: 'border-rose-300',   btnHover: 'hover:bg-rose-100' },
+}
+const DEFAULT_MEDIA_COLOR = { border: 'border-gray-200', bg: 'bg-gray-50/30', text: 'text-gray-700', btnBorder: 'border-gray-300', btnHover: 'hover:bg-gray-100' }
+
 // 마케팅 매체 상품 목록
 const PRODUCT_OPTIONS = [
   { value: '배민',          label: '배민' },
@@ -78,19 +90,30 @@ export default function NewSalePage() {
   // 매체별 금액
   const [mediaAmounts, setMediaAmounts] = useState<Record<string, string>>({})
 
-  // 미디어 계약 정보 (다중 입력)
-  const [mediaContracts, setMediaContracts] = useState([{ complexName: '', installCount: '', unitPrice: '', monthlyPrice: '' }])
+  // 매체별 미디어 계약 정보 (매체명 → 단지 배열)
+  const [mediaContractsByMedia, setMediaContractsByMedia] = useState<
+    Record<string, { complexName: string; installCount: string; unitPrice: string; monthlyPrice: string }[]>
+  >({})
 
-  const addMediaContract = () => {
-    setMediaContracts(prev => [...prev, { complexName: '', installCount: '', unitPrice: '', monthlyPrice: '' }])
+  const addMediaContract = (mediaName: string) => {
+    setMediaContractsByMedia(prev => ({
+      ...prev,
+      [mediaName]: [...(prev[mediaName] || []), { complexName: '', installCount: '', unitPrice: '', monthlyPrice: '' }]
+    }))
   }
 
-  const removeMediaContract = (index: number) => {
-    setMediaContracts(prev => prev.filter((_, i) => i !== index))
+  const removeMediaContract = (mediaName: string, index: number) => {
+    setMediaContractsByMedia(prev => ({
+      ...prev,
+      [mediaName]: (prev[mediaName] || []).filter((_, i) => i !== index)
+    }))
   }
 
-  const updateMediaContract = (index: number, field: string, value: string) => {
-    setMediaContracts(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item))
+  const updateMediaContract = (mediaName: string, index: number, field: string, value: string) => {
+    setMediaContractsByMedia(prev => ({
+      ...prev,
+      [mediaName]: (prev[mediaName] || []).map((item, i) => i === index ? { ...item, [field]: value } : item)
+    }))
   }
 
   // 매체별 금액 합계 (총 계약금액 자동 계산)
@@ -133,6 +156,9 @@ export default function NewSalePage() {
     }
   }
 
+  // 선택된 옥외매체 목록
+  const selectedOutdoorMedia = formData.productNames.filter(p => OUTDOOR_MEDIA.includes(p))
+
   // 상품 체크박스 변경 핸들러
   const handleProductChange = (productValue: string, checked: boolean) => {
     setFormData(prev => {
@@ -147,6 +173,15 @@ export default function NewSalePage() {
       delete next[productValue]
       return next
     })
+    // 옥외매체인 경우 mediaContractsByMedia 동기화
+    if (OUTDOOR_MEDIA.includes(productValue)) {
+      setMediaContractsByMedia(prev => {
+        if (checked) return { ...prev, [productValue]: [{ complexName: '', installCount: '', unitPrice: '', monthlyPrice: '' }] }
+        const next = { ...prev }
+        delete next[productValue]
+        return next
+      })
+    }
   }
 
   // 온라인 점검 체크박스 변경 핸들러
@@ -182,6 +217,16 @@ export default function NewSalePage() {
       return
     }
 
+    // 옥외매체 단지별 대당단가 또는 월단가 중 하나 필수
+    for (const [mediaName, contracts] of Object.entries(mediaContractsByMedia)) {
+      for (const [idx, c] of contracts.entries()) {
+        if (c.complexName && !c.unitPrice && !c.monthlyPrice) {
+          alert(`${mediaName}의 ${idx + 1}번째 단지에 대당단가 또는 월단가를 입력해주세요.`)
+          return
+        }
+      }
+    }
+
     setIsLoading(true)
 
     try {
@@ -207,11 +252,18 @@ export default function NewSalePage() {
           mediaAmounts: Object.fromEntries(
             Object.entries(mediaAmounts).map(([k, v]) => [k, parseInt(v.replace(/,/g, '')) || 0])
           ),
-          // 미디어 계약 정보 (옥외매체): 여러 단지를 줄바꿈으로 직렬화
-          mediaComplexName: mediaContracts.map(m => m.complexName).filter(Boolean).join('\n'),
-          mediaInstallCount: mediaContracts.map(m => m.installCount).filter(Boolean).join('\n'),
-          mediaUnitPrice: mediaContracts.map(m => m.unitPrice ? parseInt(m.unitPrice.replace(/,/g, '')) : 0).filter(v => v > 0).join('\n'),
-          mediaMonthlyPrice: mediaContracts.map(m => m.monthlyPrice ? parseInt(m.monthlyPrice.replace(/,/g, '')) : 0).filter(v => v > 0).join('\n'),
+          // 매체별 계약정보 (옥외매체): 매체명 → { complexName, installCount, unitPrice, monthlyPrice }
+          mediaContractsByMedia: Object.fromEntries(
+            Object.entries(mediaContractsByMedia).map(([mediaName, contracts]) => [
+              mediaName,
+              {
+                complexName: contracts.map(c => c.complexName).filter(Boolean).join('\n'),
+                installCount: contracts.map(c => c.installCount).filter(Boolean).join('\n'),
+                unitPrice: contracts.map(c => c.unitPrice ? parseInt(c.unitPrice.replace(/,/g, '')) : 0).filter((v): v is number => v > 0).join('\n'),
+                monthlyPrice: contracts.map(c => c.monthlyPrice ? parseInt(c.monthlyPrice.replace(/,/g, '')) : 0).filter((v): v is number => v > 0).join('\n'),
+              }
+            ])
+          ),
         }),
       })
 
@@ -498,92 +550,104 @@ export default function NewSalePage() {
           </CardContent>
         </Card>
 
-        {/* 미디어 계약 정보 (옥외매체 선택 시 표시) */}
-        {hasOutdoorMedia && (
-          <Card className="border-orange-200 bg-orange-50/30">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg text-orange-700 flex items-center gap-2">
-                    🏢 미디어 계약 정보 (옥외매체)
-                  </CardTitle>
-                  <CardDescription>
-                    옥외매체 계약 시 단지 정보를 입력해주세요. (단지명, 설치대수는 필수)
-                  </CardDescription>
+        {/* 매체별 미디어 계약 정보 (옥외매체 선택 시 매체별로 표시) */}
+        {selectedOutdoorMedia.map(mediaName => {
+          const color = MEDIA_COLORS[mediaName] || DEFAULT_MEDIA_COLOR
+          const contracts = mediaContractsByMedia[mediaName] || []
+          return (
+            <Card key={mediaName} className={`${color.border} ${color.bg}`}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className={`text-lg ${color.text} flex items-center gap-2`}>
+                      {mediaName} 계약정보
+                    </CardTitle>
+                    <CardDescription>
+                      단지 정보를 입력해주세요. (단지명, 설치대수, 대당단가 또는 월단가 필수)
+                    </CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={`${color.btnBorder} ${color.text} ${color.btnHover}`}
+                    onClick={() => addMediaContract(mediaName)}
+                  >
+                    + 단지 추가
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="border-orange-300 text-orange-700 hover:bg-orange-100"
-                  onClick={addMediaContract}
-                >
-                  + 단지 추가
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {mediaContracts.map((contract, index) => (
-                <div key={index} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
-                  <div className="space-y-1">
-                    {index === 0 && <Label className="text-xs">단지명 *</Label>}
-                    <Input
-                      type="text"
-                      value={contract.complexName}
-                      onChange={(e) => updateMediaContract(index, 'complexName', e.target.value)}
-                      placeholder="예: OO아파트"
-                      required={hasOutdoorMedia && index === 0}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    {index === 0 && <Label className="text-xs">설치대수 *</Label>}
-                    <Input
-                      type="number"
-                      min="1"
-                      value={contract.installCount}
-                      onChange={(e) => updateMediaContract(index, 'installCount', e.target.value)}
-                      placeholder="예: 10"
-                      required={hasOutdoorMedia && index === 0}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    {index === 0 && <Label className="text-xs">대당단가</Label>}
-                    <Input
-                      type="text"
-                      value={contract.unitPrice}
-                      onChange={(e) => updateMediaContract(index, 'unitPrice', formatCurrency(e.target.value))}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    {index === 0 && <Label className="text-xs">월단가</Label>}
-                    <Input
-                      type="text"
-                      value={contract.monthlyPrice}
-                      onChange={(e) => updateMediaContract(index, 'monthlyPrice', formatCurrency(e.target.value))}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className={index === 0 ? 'mt-5' : ''}>
-                    {index > 0 ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-red-400 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => removeMediaContract(index)}
-                      >
-                        ✕
-                      </Button>
-                    ) : (
-                      <div className="h-9 w-9" />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {contracts.map((contract, index) => {
+                  const missingPrice = contract.complexName && !contract.unitPrice && !contract.monthlyPrice
+                  return (
+                    <div key={index}>
+                      <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
+                        <div className="space-y-1">
+                          {index === 0 && <Label className="text-xs">단지명 *</Label>}
+                          <Input
+                            type="text"
+                            value={contract.complexName}
+                            onChange={(e) => updateMediaContract(mediaName, index, 'complexName', e.target.value)}
+                            placeholder="예: OO아파트"
+                            required={index === 0}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          {index === 0 && <Label className="text-xs">설치대수 *</Label>}
+                          <Input
+                            type="number"
+                            min="1"
+                            value={contract.installCount}
+                            onChange={(e) => updateMediaContract(mediaName, index, 'installCount', e.target.value)}
+                            placeholder="예: 10"
+                            required={index === 0}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          {index === 0 && <Label className="text-xs">대당단가 *</Label>}
+                          <Input
+                            type="text"
+                            value={contract.unitPrice}
+                            onChange={(e) => updateMediaContract(mediaName, index, 'unitPrice', formatCurrency(e.target.value))}
+                            placeholder="0"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          {index === 0 && <Label className="text-xs">월단가 *</Label>}
+                          <Input
+                            type="text"
+                            value={contract.monthlyPrice}
+                            onChange={(e) => updateMediaContract(mediaName, index, 'monthlyPrice', formatCurrency(e.target.value))}
+                            placeholder="0"
+                          />
+                        </div>
+                        <div className={index === 0 ? 'mt-5' : ''}>
+                          {index > 0 ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 text-red-400 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => removeMediaContract(mediaName, index)}
+                            >
+                              ✕
+                            </Button>
+                          ) : (
+                            <div className="h-9 w-9" />
+                          )}
+                        </div>
+                      </div>
+                      {missingPrice && (
+                        <p className="text-xs text-red-500 mt-1">대당단가 또는 월단가 중 하나를 입력하세요</p>
+                      )}
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
+          )
+        })}
 
         {/* 섹션 3: 결제 정보 */}
         <Card>

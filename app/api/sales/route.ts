@@ -105,7 +105,10 @@ export async function POST(request: NextRequest) {
       onlineCheckRequested,
       onlineCheckDateTime,
 
-      // 미디어 계약 정보
+      // 매체별 계약정보 (매체명 → { complexName, installCount, unitPrice, monthlyPrice })
+      mediaContractsByMedia,
+
+      // 하위 호환: 기존 단일 필드
       mediaComplexName,
       mediaInstallCount,
       mediaUnitPrice,
@@ -117,6 +120,14 @@ export async function POST(request: NextRequest) {
       // 매체별 금액 { 매체명: 금액 }
       mediaAmounts,
     } = body
+
+    // 하위 호환: 기존 단일 필드가 오면 폴백용 객체 생성
+    const legacyContract = mediaComplexName ? {
+      complexName: mediaComplexName,
+      installCount: mediaInstallCount,
+      unitPrice: mediaUnitPrice,
+      monthlyPrice: mediaMonthlyPrice,
+    } : null
 
     // 현재 날짜와 시간
     const now = new Date().toISOString()
@@ -164,6 +175,14 @@ export async function POST(request: NextRequest) {
       ? Object.entries(mediaAmounts as Record<string, number>)
       : [[finalProductName, totalAmount]]
 
+    // 매체명으로 해당 매체의 계약정보 조회 (하위 호환 폴백 포함)
+    const getMediaInfo = (productName: string) => {
+      if (mediaContractsByMedia && mediaContractsByMedia[productName]) {
+        return mediaContractsByMedia[productName]
+      }
+      return legacyContract || { complexName: '', installCount: '', unitPrice: '', monthlyPrice: '' }
+    }
+
     // Google Sheets에 데이터 쓰기 - 매체별 행 분리
     // 외주비는 첫 번째 행에만 기록 (중복 집계 방지)
     // Sales 시트 컬럼 구조 (A:AE, AE열=contractId 추가)
@@ -171,6 +190,7 @@ export async function POST(request: NextRequest) {
       const rowMonthlyAmount = Math.round(amountForRow / effectiveMonths)
       const rowOutsourcingCost = isFirst ? (outsourcingCost || 0) : 0
       const rowNetProfit = amountForRow - rowOutsourcingCost
+      const mediaInfo = getMediaInfo(productNameForRow)
       return [
         contractDate,
         department,
@@ -193,10 +213,10 @@ export async function POST(request: NextRequest) {
         onlineCheckDateTime || '',
         clientAddress || '',
         clientContact || '',
-        mediaComplexName || '',
-        mediaInstallCount ? `'${mediaInstallCount.toString()}` : '',
-        mediaUnitPrice ? `'${mediaUnitPrice.toString()}` : '',
-        mediaMonthlyPrice ? `'${mediaMonthlyPrice.toString()}` : '',
+        mediaInfo.complexName || '',
+        mediaInfo.installCount ? `'${mediaInfo.installCount.toString()}` : '',
+        mediaInfo.unitPrice ? `'${mediaInfo.unitPrice.toString()}` : '',
+        mediaInfo.monthlyPrice ? `'${mediaInfo.monthlyPrice.toString()}` : '',
         depositorName || '',
         contractEndDate.toISOString().split('T')[0],
         rowMonthlyAmount.toString(),    // AB: 월평균금액
@@ -206,11 +226,12 @@ export async function POST(request: NextRequest) {
       ]
     }
 
-    // 원본데이터 시트 컬럼 구조 (A:AG, AG열=contractId 추가)
+    // 원본데이터 시트 컬럼 구조 (A:AH, AH열=contractId 추가)
     const buildRawDataRow = (productNameForRow: string, amountForRow: number, isFirst: boolean) => {
       const rowMonthlyAmount = Math.round(amountForRow / effectiveMonths)
       const rowOutsourcingCost = isFirst ? (outsourcingCost || 0) : 0
       const rowNetProfit = amountForRow - rowOutsourcingCost
+      const mediaInfo = getMediaInfo(productNameForRow)
       return [
         now,                                // A: 타임스탬프
         department,                         // B: 부서
@@ -239,10 +260,10 @@ export async function POST(request: NextRequest) {
         clientContact || '',               // Y: 광고주 연락처
         '',                                // Z: 점검상태
         '',                                // AA: 처리메모
-        mediaComplexName || '',            // AB: 단지명
-        mediaInstallCount ? `'${mediaInstallCount.toString()}` : '', // AC: 설치대수
-        mediaUnitPrice ? `'${mediaUnitPrice.toString()}` : '',       // AD: 대당단가
-        mediaMonthlyPrice ? `'${mediaMonthlyPrice.toString()}` : '', // AE: 월단가
+        mediaInfo.complexName || '',       // AB: 단지명
+        mediaInfo.installCount ? `'${mediaInfo.installCount.toString()}` : '', // AC: 설치대수
+        mediaInfo.unitPrice ? `'${mediaInfo.unitPrice.toString()}` : '',       // AD: 대당단가
+        mediaInfo.monthlyPrice ? `'${mediaInfo.monthlyPrice.toString()}` : '', // AE: 월단가
         depositorName || '',               // AF: 입금자명
         '',                                // AG: 입금완료날짜 (수동 입력)
         contractId,                        // AH: 계약 묶음 ID (신규)
