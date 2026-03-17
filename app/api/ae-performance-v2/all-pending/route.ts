@@ -73,7 +73,7 @@ export async function GET() {
       const aeString = row[5] || ''
 
       // 진행 중이거나 대기 중이고 종료일이 지난 광고주만
-      if ((status !== '진행' && status !== '대기') || !endDateStr || !clientName) return
+      if (status !== '진행' || !endDateStr || !clientName) return
 
       const endDate = parseDate(endDateStr)
       if (!endDate) return
