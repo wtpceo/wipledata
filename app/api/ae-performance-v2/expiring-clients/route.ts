@@ -107,6 +107,7 @@ export async function GET(request: NextRequest) {
     // 3. 원본데이터 파싱 (이번 달 매출 및 연장 건 확인)
     const salesMap = new Map<string, { count: number, amount: number, renewedClients: any[] }>() // AE별 매출 통계
     const renewalSuccessSet = new Set<string>() // 연장 성공한 업체명 목록 (AE:ClientName 조합)
+    const allSalesClientsSet = new Set<string>() // 모든 매출 입력 업체 (AE:ClientName 조합) - 분모용
 
     rawData.forEach(row => {
       const department = row[1] || ''
@@ -130,7 +131,12 @@ export async function GET(request: NextRequest) {
         stat.count += 1
         stat.amount += totalAmount
 
-        // [핵심] 연장 성공 건 식별 -> 분모에 강제 추가할 예정 (연장, 재계약, 소개 포함)
+        // 모든 매출 입력 건을 분모에 포함
+        if (clientName) {
+          allSalesClientsSet.add(`${aeName}:${clientName}`)
+        }
+
+        // [핵심] 연장 성공 건 식별 (분자 계산용: 연장, 재계약, 소개만)
         if (salesType.includes('연장') || salesType.includes('재계약') || salesType.includes('소개')) {
           renewalSuccessSet.add(`${aeName}:${clientName}`)
           stat.renewedClients.push({
@@ -191,19 +197,11 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // (B) [핵심] 연장 성공 건도 분모에 강제 추가
-    renewalSuccessSet.forEach(key => {
+    // (B) [핵심] 모든 매출 입력 건을 분모에 강제 추가 (신규 포함)
+    allSalesClientsSet.forEach(key => {
       const [aeName, clientName] = key.split(':')
-
       if (!aeTargetClientsMap.has(aeName)) aeTargetClientsMap.set(aeName, new Set())
-
-      // 이미 있는지 확인 (Set이라 자동 중복 제거되지만 로직 명확성을 위해)
-      const isNew = !aeTargetClientsMap.get(aeName)!.has(clientName)
-
-      if (isNew) {
-        // 분모에 추가
-        aeTargetClientsMap.get(aeName)!.add(clientName)
-      }
+      aeTargetClientsMap.get(aeName)!.add(clientName)
     })
 
     // (C) 연장 실패 건도 분모에 추가 (V1 로직 복원)
