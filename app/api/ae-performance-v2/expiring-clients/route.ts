@@ -8,6 +8,9 @@ export const dynamic = 'force-dynamic'
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!
 
+// 인바운드 포지션 AE (연장율 추적 제외, 매출 통계만 표시)
+const INBOUND_AES = new Set(['박한제'])
+
 // 담당자 이름 정규화 (이름만 추출)
 function extractAEName(aeString: string): string[] {
   if (!aeString) return []
@@ -258,12 +261,14 @@ export async function GET(request: NextRequest) {
     })
 
     const aeStats = Array.from(allAEs).map(aeName => {
-      const targetSet = aeTargetClientsMap.get(aeName) || new Set()
       const salesStat = salesMap.get(aeName) || { count: 0, amount: 0, renewedClients: [] }
+      const isInbound = INBOUND_AES.has(aeName)
 
-      const expiringCount = targetSet.size // 분모: 종료예정(진행) + 연장성공 + 연장실패
-      const renewalCount = aeRenewalCount.get(aeName) || 0 // 분자: 연장/재계약/소개 고유 업체 수
-      const failedCount = aeFailedMap.get(aeName) || 0
+      // 인바운드 AE는 연장율 추적 제외 (매출 통계만)
+      const targetSet = isInbound ? new Set<string>() : (aeTargetClientsMap.get(aeName) || new Set())
+      const expiringCount = targetSet.size
+      const renewalCount = isInbound ? 0 : (aeRenewalCount.get(aeName) || 0)
+      const failedCount = isInbound ? 0 : (aeFailedMap.get(aeName) || 0)
 
       return {
         aeName,
@@ -274,7 +279,6 @@ export async function GET(request: NextRequest) {
         pendingClients: Math.max(0, expiringCount - renewalCount - failedCount),
         totalRenewalAmount: salesStat.amount,
         renewedClientsDetails: salesStat.renewedClients || [],
-        // 연장율: 계약건수 / 분모
         renewalRate: expiringCount > 0
           ? Math.min(100, Math.round((renewalCount / expiringCount) * 100))
           : 0
