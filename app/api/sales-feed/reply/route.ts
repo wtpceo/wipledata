@@ -4,8 +4,8 @@ import { notifyNewReply } from '@/lib/solapi'
 
 // 답글 텍스트에서 금액을 파싱하는 함수 (입금완료 키워드와 함께 사용)
 function parseAmountFromText(text: string): number | null {
-    // "입금완료" 키워드 제거 후 금액 파싱
-    const cleaned = text.replace(/입금\s*완료/g, '').trim()
+    // 입금 관련 키워드 제거 후 금액 파싱
+    const cleaned = text.replace(/입금\s*(완료|확인)/g, '').trim()
     if (!cleaned) return null
 
     // 패턴 1: 만원 단위 ("50만원", "50만", "120만원")
@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
         // Ensure we start writing back to the exact same cell M{rowIndex}
         await updateSheet(cellRange, [[finalNotes]])
 
-        // 입금완료 키워드 감지: 댓글에 "입금완료" 또는 "입금 완료"가 포함되며 작성자가 "김민우"일 경우에만 결제방식을 업데이트
+        // 입금완료/입금확인 키워드 감지: 작성자가 "김민우"일 경우에만 결제방식을 업데이트
         let paymentUpdated = false
-        const isPaymentCompleteKeyword = replyText.includes('입금완료') || replyText.includes('입금 완료')
+        const isPaymentCompleteKeyword = replyText.includes('입금완료') || replyText.includes('입금 완료') || replyText.includes('입금확인') || replyText.includes('입금 확인')
         if (isPaymentCompleteKeyword && authorName === '김민우') {
             // I열(인덱스 8): 결제 방식 읽기
             const paymentCellRange = `원본데이터!I${rowIndex}`
