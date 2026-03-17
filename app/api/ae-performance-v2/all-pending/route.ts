@@ -48,7 +48,7 @@ export async function GET() {
     // A: 상태, B: 업체명, C: 계약금액, D: 시작일, E: 종료일, F: 담당자
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Clients!A:F',
+      range: 'Clients!A:G',
     })
 
     const rows = response.data.values || []
@@ -94,7 +94,8 @@ export async function GET() {
             isDuplicate,
             duplicateWith: isDuplicate ? aeNames.filter(n => n !== aeName) : [],
             status: 'pending',
-            daysOverdue: Math.floor((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+            daysOverdue: Math.floor((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24)),
+            marketingMedia: row[6] || ''
           }
 
           pendingClients.push(client)

@@ -22,23 +22,52 @@ function extractAEName(aeString: string): string[] {
 // 날짜 파싱
 function parseDate(dateStr: string): Date | null {
   if (!dateStr) return null
+
   try {
-    if (dateStr.includes('T')) return new Date(dateStr)
-    if (/^\d{4}\.\d{1,2}\.\d{1,2}$/.test(dateStr)) {
-      const [year, month, day] = dateStr.split('.')
+    let cleaned = dateStr.trim()
+
+    // 물결표(~) 접두사 제거: "~2025.03.15" → "2025.03.15"
+    cleaned = cleaned.replace(/^~/, '')
+
+    // 범위 형식에서 종료일(뒤쪽) 추출: "2025.03.15~2025.09.15" → "2025.09.15"
+    if (cleaned.includes('~')) {
+      cleaned = cleaned.split('~').pop()!.trim()
+    }
+
+    // 공백 제거: "2026. 3. 14" → "2026.3.14"
+    cleaned = cleaned.replace(/\s/g, '')
+
+    // 끝에 붙은 점 제거: "2026.3.14." → "2026.3.14"
+    cleaned = cleaned.replace(/\.$/, '')
+
+    // ISO 형식
+    if (cleaned.includes('T')) {
+      const d = new Date(cleaned)
+      return isNaN(d.getTime()) ? null : d
+    }
+    // YYYY.MM.DD 형식
+    if (/^\d{4}\.\d{1,2}\.\d{1,2}$/.test(cleaned)) {
+      const [year, month, day] = cleaned.split('.')
       return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
     }
-    if (dateStr.includes('/')) {
-      const parts = dateStr.split('/')
+    // YYYY-MM-DD 형식 (명시적 처리)
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleaned)) {
+      const [year, month, day] = cleaned.split('-')
+      return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+    }
+    // MM/DD/YYYY 형식
+    if (cleaned.includes('/')) {
+      const parts = cleaned.split('/')
       if (parts.length === 3) {
-        // MM/DD/YYYY 가정 (한국식일 수도 있으나 기존 코드 존중)
-        const [m, d, y] = parts
-        // 만약 YYYY가 앞이라면 로직 수정 필요하나, 일단 기존 로직 유지
         return new Date(`${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`)
       }
     }
-    return new Date(dateStr)
-  } catch { return null }
+    // 폴백
+    const fallback = new Date(cleaned)
+    return isNaN(fallback.getTime()) ? null : fallback
+  } catch {
+    return null
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -67,7 +96,7 @@ export async function GET(request: NextRequest) {
     // (A) Clients 시트 (종료 예정 확인용)
     const clientsRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Clients!A:F',
+      range: 'Clients!A:G',
     })
     const clientsRows = clientsRes.data.values || []
     const [_, ...dataRows] = clientsRows // 헤더 제외
@@ -155,7 +184,8 @@ export async function GET(request: NextRequest) {
             amount,
             endDate: endDateStr,
             status: status === '대기' ? 'waiting' : 'pending',
-            isAddedBySuccess: false // 원래 목록에 있던 놈
+            isAddedBySuccess: false, // 원래 목록에 있던 놈
+            marketingMedia: row[6] || ''
           })
         })
       }

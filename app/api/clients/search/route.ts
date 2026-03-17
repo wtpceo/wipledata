@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     // A: 상태, B: 업체명, C: 계약금액, D: 시작일, E: 종료일, F: 담당자
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Clients!A:F',
+      range: 'Clients!A:G',
     })
 
     const rows = response.data.values || []
@@ -118,6 +118,7 @@ export async function GET(request: NextRequest) {
           startDate,
           endDate,
           aeNames,
+          marketingMedia: row[6] || '',
           similarity
         }
       })

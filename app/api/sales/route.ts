@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server'
-import { writeToSheet, readFromSheet, SHEETS, touchLastModified, applyBorderFormat } from '@/lib/google-sheets'
+import { writeToSheet, readFromSheet, updateSheet, SHEETS, touchLastModified, applyBorderFormat } from '@/lib/google-sheets'
 import { normalizeStaffName } from '@/lib/normalize-staff-name'
 import { notifyNewSale } from '@/lib/solapi'
 import { randomUUID } from 'crypto'
@@ -300,6 +300,24 @@ export async function POST(request: NextRequest) {
     } catch (writeError) {
       console.error('❌ Error writing to sheets:', writeError)
       throw writeError
+    }
+
+    // Clients G열(마케팅매체) 자동 반영 — 비어있는 경우만
+    try {
+      const clientsData = await readFromSheet('Clients!B2:G')
+      for (let i = 0; i < clientsData.length; i++) {
+        const row = clientsData[i]
+        const sheetClientName = (row[0] || '').trim()  // B열 = index 0
+        const existingMedia = (row[5] || '').trim()     // G열 = index 5
+
+        if (sheetClientName === clientName && !existingMedia) {
+          await updateSheet(`Clients!G${i + 2}`, [[finalProductName]])
+          console.log(`✅ Clients G열 마케팅매체 업데이트: ${clientName} → ${finalProductName}`)
+          break
+        }
+      }
+    } catch (err) {
+      console.error('❌ Clients 마케팅매체 자동 반영 실패:', err)
     }
 
     await touchLastModified()
