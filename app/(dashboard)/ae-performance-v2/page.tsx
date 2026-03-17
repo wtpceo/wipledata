@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Users, TrendingUp, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronRight, DollarSign } from "lucide-react"
+import { Users, TrendingUp, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronRight, ChevronLeft, DollarSign } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, LabelList } from "recharts"
 import {
@@ -91,6 +91,18 @@ export default function AEPerformanceV2Page() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [yearlyTrend, setYearlyTrend] = useState<any[]>([])
   const [yearlyAeList, setYearlyAeList] = useState<string[]>([])
+
+  // 월 이동 함수
+  const goToPrevMonth = () => {
+    const [y, m] = month.split('-').map(Number)
+    const d = new Date(y, m - 2, 1)
+    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  const goToNextMonth = () => {
+    const [y, m] = month.split('-').map(Number)
+    const d = new Date(y, m, 1)
+    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
 
   // 미처리 연장 건
   const [allPendingClients, setAllPendingClients] = useState<ExpiringClient[]>([])
@@ -366,6 +378,20 @@ export default function AEPerformanceV2Page() {
             이번 달 종료 예정 광고주 관리 및 연장 현황 추적
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={goToPrevMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="w-40"
+          />
+          <Button variant="outline" size="icon" onClick={goToNextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* 연간 매출 트렌드 그래프 */}
@@ -476,10 +502,19 @@ export default function AEPerformanceV2Page() {
       {yearlyAeList.length > 0 && yearlyTrend.length > 0 && (() => {
         const tableData = yearlyAeList.map(aeName => {
           const monthlySales = yearlyTrend.map(monthData => monthData[aeName] || 0)
+          const monthlyRenewalRates = yearlyTrend.map(monthData => monthData.renewalRates?.[aeName] as number | undefined)
           const totalSales = monthlySales.reduce((sum, val) => sum + val, 0)
-          const stat = aeStats.find(s => s.aeName === aeName)
-          const renewalRate = stat ? stat.renewalRate : 0
-          return { aeName, monthlySales, totalSales, renewalRate }
+          // 총 연장율: 분모/분자가 있는 월만 가중 평균
+          let totalNumer = 0
+          let monthsWithData = 0
+          monthlyRenewalRates.forEach((rate, idx) => {
+            if (rate !== undefined && monthlySales[idx] > 0) {
+              totalNumer += rate
+              monthsWithData++
+            }
+          })
+          const totalRenewalRate = monthsWithData > 0 ? Math.round(totalNumer / monthsWithData) : 0
+          return { aeName, monthlySales, monthlyRenewalRates, totalSales, totalRenewalRate }
         }).sort((a, b) => b.totalSales - a.totalSales)
 
         return (
@@ -499,7 +534,7 @@ export default function AEPerformanceV2Page() {
                       </TableHead>
                     ))}
                     <TableHead className="text-right font-bold whitespace-nowrap">총 매출</TableHead>
-                    <TableHead className="text-right whitespace-nowrap">연장율(당월)</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">총 연장율</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -508,14 +543,21 @@ export default function AEPerformanceV2Page() {
                       <TableCell className="font-medium whitespace-nowrap">{row.aeName}</TableCell>
                       {row.monthlySales.map((sales, idx) => (
                         <TableCell key={idx} className="text-right whitespace-nowrap">
-                          {sales > 0 ? formatCurrency(sales) : '-'}
+                          {sales > 0 ? (
+                            <>
+                              {formatCurrency(sales)}
+                              {row.monthlyRenewalRates[idx] !== undefined && (
+                                <span className="text-xs text-muted-foreground ml-1">({row.monthlyRenewalRates[idx]}%)</span>
+                              )}
+                            </>
+                          ) : '-'}
                         </TableCell>
                       ))}
                       <TableCell className="text-right font-bold whitespace-nowrap text-orange-500">
                         {formatCurrency(row.totalSales)}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        {row.renewalRate.toFixed(1)}%
+                        {row.totalRenewalRate > 0 ? `${row.totalRenewalRate}%` : '-'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -525,23 +567,6 @@ export default function AEPerformanceV2Page() {
           </Card>
         )
       })()}
-
-      {/* 월 선택 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>대상 월 선택</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="w-64">
-            <Label>대상 월</Label>
-            <Input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* 미처리 연장 건 섹션 */}
       <Card className="border-orange-200 bg-orange-50">
