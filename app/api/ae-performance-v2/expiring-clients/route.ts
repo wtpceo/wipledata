@@ -239,6 +239,13 @@ export async function GET(request: NextRequest) {
     });
 
     // 5. 최종 통계 산출 (Rankings)
+    // AE별 연장 성공 고유 업체 수 집계 (분자)
+    const aeRenewalCount = new Map<string, number>()
+    renewalSuccessSet.forEach(key => {
+      const aeName = key.split(':')[0]
+      aeRenewalCount.set(aeName, (aeRenewalCount.get(aeName) || 0) + 1)
+    })
+
     // 모든 AE 목록 추출 (Clients 시트 + 매출 발생 AE)
     const allAEs = new Set([...aeTargetClientsMap.keys(), ...salesMap.keys()])
 
@@ -256,21 +263,22 @@ export async function GET(request: NextRequest) {
       const targetSet = aeTargetClientsMap.get(aeName) || new Set()
       const salesStat = salesMap.get(aeName) || { count: 0, amount: 0, renewedClients: [] }
 
-      const expiringCount = targetSet.size // 보정된 분모 (원래 예정 + 성공한 건)
-      const salesCount = salesStat.count   // 분자
+      const expiringCount = targetSet.size // 분모: 종료예정(진행) + 연장성공 + 연장실패
+      const renewalCount = aeRenewalCount.get(aeName) || 0 // 분자: 연장/재계약/소개 고유 업체 수
+      const failedCount = aeFailedMap.get(aeName) || 0
 
       return {
         aeName,
         totalClients: aeTotalClientsMap.get(aeName) || 0,
-        expiringClients: expiringCount, // 이제 7이 아니라 27이 됨
-        renewedClients: salesCount,
-        failedClients: aeFailedMap.get(aeName) || 0,
-        pendingClients: Math.max(0, expiringCount - salesCount),
+        expiringClients: expiringCount,
+        renewedClients: renewalCount,
+        failedClients: failedCount,
+        pendingClients: Math.max(0, expiringCount - renewalCount - failedCount),
         totalRenewalAmount: salesStat.amount,
         renewedClientsDetails: salesStat.renewedClients || [],
-        // 연장율: 100% 초과 방지됨
+        // 연장율: 계약건수 / 분모
         renewalRate: expiringCount > 0
-          ? Math.min(100, Math.round((salesCount / expiringCount) * 100))
+          ? Math.min(100, Math.round((renewalCount / expiringCount) * 100))
           : 0
       }
     }).sort((a, b) => b.expiringClients - a.expiringClients)
