@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!
 
 // 인바운드 포지션 AE (연장율 추적 제외, 매출 통계만 표시)
-const INBOUND_AES = new Set(['박한제'])
+const INBOUND_AES = new Set(['박한'])
 
 // 담당자 이름 정규화 (이름만 추출)
 function extractAEName(aeString: string): string[] {
