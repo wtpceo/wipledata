@@ -206,6 +206,31 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // (C) 연장 실패 건도 분모에 추가 (V1 로직 복원)
+    const aeFailedMap = new Map<string, number>()
+    dataRows.forEach(row => {
+      if (row[0] !== '연장 실패') return
+      const clientName = (row[1] || '').trim()
+      const endDateStr = row[4] || ''
+      const aeString = row[5] || ''
+      if (!endDateStr || !clientName) return
+
+      const endDate = parseDate(endDateStr)
+      if (!endDate) return
+
+      if (endDate.getMonth() === targetMonth && endDate.getFullYear() === targetYear) {
+        const aeNames = extractAEName(aeString)
+        aeNames.forEach(aeName => {
+          // 분모에 추가
+          if (!aeTargetClientsMap.has(aeName)) aeTargetClientsMap.set(aeName, new Set())
+          aeTargetClientsMap.get(aeName)!.add(clientName)
+
+          // 실패 건수 집계
+          aeFailedMap.set(aeName, (aeFailedMap.get(aeName) || 0) + 1)
+        })
+      }
+    })
+
     // expiringClientsList 날짜 오름차순(빠른 종료일 순)으로 정렬
     expiringClientsList.sort((a, b) => {
       const dateA = parseDate(a.endDate)?.getTime() || 0;
@@ -239,7 +264,7 @@ export async function GET(request: NextRequest) {
         totalClients: aeTotalClientsMap.get(aeName) || 0,
         expiringClients: expiringCount, // 이제 7이 아니라 27이 됨
         renewedClients: salesCount,
-        failedClients: 0, // 별도 계산 필요 시 추가
+        failedClients: aeFailedMap.get(aeName) || 0,
         pendingClients: Math.max(0, expiringCount - salesCount),
         totalRenewalAmount: salesStat.amount,
         renewedClientsDetails: salesStat.renewedClients || [],
