@@ -127,6 +127,9 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // 연장/재계약 타입 여부 (입금 상태 무관 - 분모용)
+        const isRenewalType = salesType.includes('연장') || salesType.includes('재계약')
+
         return {
           department,
           aeName,
@@ -134,7 +137,9 @@ export async function GET(request: NextRequest) {
           clientName,
           totalAmount: actualAmount,
           saleMonth,
-          isRenewal: salesType.includes('연장') || salesType.includes('재계약')
+          isRenewalType,
+          isRenewal: !isPaymentPending && isRenewalType, // 분자용: 입금예정이면 연장 성공으로 인정 안 함
+          isPaymentPending
         }
       })
       .filter(sale => sale.saleMonth) // 날짜 파싱 실패한 건 제외
@@ -218,9 +223,9 @@ export async function GET(request: NextRequest) {
           }
         })
 
-        // (B) 원본데이터에서 연장 성공한 건도 분모에 강제 추가 (V2 핵심 로직)
+        // (B) 원본데이터에서 연장/재계약 건을 분모에 강제 추가 (입금예정 포함 - 분모 유지)
         monthSales.forEach(sale => {
-          if (sale.isRenewal) {
+          if (sale.isRenewalType) {
             if (!aeTargetClientsMap.has(sale.aeName)) aeTargetClientsMap.set(sale.aeName, new Set())
             aeTargetClientsMap.get(sale.aeName)!.add(sale.clientName)
           }

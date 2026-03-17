@@ -139,8 +139,8 @@ export async function GET(request: NextRequest) {
           allSalesClientsSet.add(`${aeName}:${clientName}`)
         }
 
-        // [핵심] 연장 성공 건 식별 (분자 계산용: 연장, 재계약, 소개만)
-        if (salesType.includes('연장') || salesType.includes('재계약') || salesType.includes('소개')) {
+        // [핵심] 연장 성공 건 식별 (분자 계산용: 연장, 재계약, 소개만 + 입금예정 제외)
+        if (paymentMethod !== '입금예정' && (salesType.includes('연장') || salesType.includes('재계약') || salesType.includes('소개'))) {
           renewalSuccessSet.add(`${aeName}:${clientName}`)
           stat.renewedClients.push({
             clientName,

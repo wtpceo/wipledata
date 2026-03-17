@@ -112,14 +112,14 @@ export async function GET(request: NextRequest) {
                 monthData.aes[aeName] = (monthData.aes[aeName] || 0) + totalAmount
                 monthData.total += totalAmount
 
-                // 연장율 계산: 모든 매출 입력 건 → 분모에 추가
+                // 연장율 계산: 모든 매출 입력 건 → 분모에 추가 (입금예정 포함)
                 if (clientName && !INBOUND_AES.has(aeName)) {
                     const rd = monthlyRenewalData.get(targetMonth)!
                     if (!rd.aeTargets.has(aeName)) rd.aeTargets.set(aeName, new Set())
                     rd.aeTargets.get(aeName)!.add(clientName)
 
-                    // 연장/재계약/소개 → 분자에도 추가
-                    if (salesType.includes('연장') || salesType.includes('재계약') || salesType.includes('소개')) {
+                    // 연장/재계약/소개 → 분자에도 추가 (입금예정 제외: 입금 확인 후에만 연장 인정)
+                    if (paymentMethod !== '입금예정' && (salesType.includes('연장') || salesType.includes('재계약') || salesType.includes('소개'))) {
                         if (!rd.aeRenewals.has(aeName)) rd.aeRenewals.set(aeName, new Set())
                         rd.aeRenewals.get(aeName)!.add(clientName)
                     }
