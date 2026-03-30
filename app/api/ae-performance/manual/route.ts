@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeToSheet, readFromSheet, touchLastModified } from '@/lib/google-sheets'
 import { notifyNewPerformance } from '@/lib/solapi'
+import { checkIdempotency } from '@/lib/idempotency'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const { _idempotencyKey, ...perfBody } = body
+
+    // 중복 제출 방지
+    const isDuplicate = await checkIdempotency(_idempotencyKey, 'ae-manual')
+    if (isDuplicate) {
+      return NextResponse.json({ success: true, message: '이미 처리된 요청입니다.', deduplicated: true })
+    }
+
     const {
       clientName,
       performanceMonth,
@@ -16,7 +25,7 @@ export async function POST(request: NextRequest) {
       failureReason,
       notes,
       timestamp
-    } = body
+    } = perfBody
 
     console.log('=== Manual AE Performance Save Request ===')
     console.log('Client:', clientName)

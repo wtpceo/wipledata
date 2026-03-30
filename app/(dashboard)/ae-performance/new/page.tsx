@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -29,6 +29,8 @@ interface AEInfo {
 export default function AEPerformanceInputPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const submittingRef = useRef(false)
+  const [idempotencyKey] = useState(() => crypto.randomUUID())
   const [aeListLoading, setAeListLoading] = useState(true)
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7))
   const [performances, setPerformances] = useState<AEPerformance[]>([])
@@ -85,6 +87,10 @@ export default function AEPerformanceInputPage() {
   }
 
   const handleSubmit = async () => {
+    // 중복 제출 방지 (useRef 동기 가드)
+    if (submittingRef.current) return
+    submittingRef.current = true
+
     try {
       setLoading(true)
 
@@ -93,6 +99,7 @@ export default function AEPerformanceInputPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          _idempotencyKey: idempotencyKey,
           month,
           performances,
           timestamp: new Date().toISOString()
@@ -113,6 +120,7 @@ export default function AEPerformanceInputPage() {
       console.error('AE Performance Save Error:', error)
     } finally {
       setLoading(false)
+      submittingRef.current = false
     }
   }
 

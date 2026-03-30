@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,8 @@ interface StaffMember {
 export default function ManualAEPerformancePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const submittingRef = useRef(false)
+  const [idempotencyKey] = useState(() => crypto.randomUUID())
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchedClient[]>([])
   const [selectedClient, setSelectedClient] = useState<SearchedClient | null>(null)
@@ -132,6 +134,10 @@ export default function ManualAEPerformancePage() {
       return
     }
 
+    // 중복 제출 방지 (useRef 동기 가드)
+    if (submittingRef.current) return
+    submittingRef.current = true
+
     try {
       setLoading(true)
 
@@ -139,6 +145,7 @@ export default function ManualAEPerformancePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          _idempotencyKey: idempotencyKey,
           clientName: selectedClient.clientName,
           performanceMonth,
           aeNames: selectedStaff,
@@ -166,6 +173,7 @@ export default function ManualAEPerformancePage() {
       console.error('Manual Performance Save Error:', error)
     } finally {
       setLoading(false)
+      submittingRef.current = false
     }
   }
 

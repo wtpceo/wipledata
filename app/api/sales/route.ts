@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { writeToSheet, readFromSheet, updateSheet, SHEETS, touchLastModified, applyBorderFormat } from '@/lib/google-sheets'
 import { normalizeStaffName } from '@/lib/normalize-staff-name'
 import { notifyNewSale } from '@/lib/solapi'
+import { checkIdempotency } from '@/lib/idempotency'
 import { randomUUID } from 'crypto'
 
 // GET: 매출 데이터 조회
@@ -74,6 +75,14 @@ export async function POST(request: NextRequest) {
     // }
 
     const body = await request.json()
+    const { _idempotencyKey, ...salesBody } = body
+
+    // 중복 제출 방지
+    const isDuplicate = await checkIdempotency(_idempotencyKey, 'sales')
+    if (isDuplicate) {
+      return NextResponse.json({ success: true, message: '이미 처리된 요청입니다.', deduplicated: true })
+    }
+
     const {
       // 섹션 1: 입력자 정보
       department,
@@ -119,7 +128,7 @@ export async function POST(request: NextRequest) {
 
       // 매체별 금액 { 매체명: 금액 }
       mediaAmounts,
-    } = body
+    } = salesBody
 
     // 하위 호환: 기존 단일 필드가 오면 폴백용 객체 생성
     const legacyContract = mediaComplexName ? {

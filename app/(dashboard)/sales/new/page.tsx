@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -51,6 +51,8 @@ const PRODUCT_OPTIONS = [
 export default function NewSalePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const submittingRef = useRef(false)
+  const [idempotencyKey] = useState(() => crypto.randomUUID())
   const [formData, setFormData] = useState({
     // 섹션 1: 입력자 정보
     department: '',
@@ -227,6 +229,10 @@ export default function NewSalePage() {
       }
     }
 
+    // 중복 제출 방지 (useRef 동기 가드)
+    if (submittingRef.current) return
+    submittingRef.current = true
+
     setIsLoading(true)
 
     try {
@@ -242,6 +248,7 @@ export default function NewSalePage() {
         },
         credentials: 'include',
         body: JSON.stringify({
+          _idempotencyKey: idempotencyKey,
           ...formData,
           totalAmount: mediaSubtotal,
           outsourcingCost: parseInt(formData.outsourcingCost.replace(/,/g, '') || '0'),
@@ -279,6 +286,7 @@ export default function NewSalePage() {
       alert('매출 등록 중 오류가 발생했습니다.')
     } finally {
       setIsLoading(false)
+      submittingRef.current = false
     }
   }
 
